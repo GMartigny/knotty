@@ -56,7 +56,7 @@ function groovePatch(): Patch {
         note("note-drums", -40, -70, 1360, 1420, "Drums: kick, snare and hi-hat (sequencer rows 1 to 3)"),
         note("note-bass", 420, 1360, 900, 710, "Bass (row 4), its filter swept by a slow oscillator"),
         note("note-melody", -200, MEL_Y - 90, 1220, 520, "Melody (row 5): a triangle whose pitch is swayed by a slow sine"),
-        note("note-mix", 1340, 730, 900, 380, "Mix: every track → reverb → output"),
+        note("note-mix", 1340, 730, 900, 360, "Mix: every track → reverb → output"),
 
         node("seq", "sequencer", 0, row(1) + 330, {
             bpm: 116,
@@ -201,7 +201,7 @@ function metalPatch(): Patch {
         note("note-drums", -40, -70, 1360, 1900, "Rhythm section: kick, snare, hi-hat, cymbal, and row 5 drives the bass below"),
         note("note-band", -40, 1845, 1660, 1040, "Guitars on a 2-row sequencer: rhythm (E + B power chord) and solo. Plus the bass"),
         note("note-solo", -380, SOLO_Y - 100, 2300, 1320, "Two lead guitars in harmony: the second one plays a third above"),
-        note("note-mix", 2260, 1630, 900, 360, "Mix: one channel per instrument → reverb → output"),
+        note("note-mix", 2260, 1630, 900, 380, "Mix: one channel per instrument → reverb → output"),
 
         // ——— Drums ———
         node("drums", "sequencer", cSeq, 700, {

@@ -302,10 +302,13 @@ button {
     grid-template-columns: 1fr 3.2em;
     align-items: center;
     gap: 8px;
+    /* With the block body's 10px gap: one channel every 28px, the same pitch as the sequencer rows. */
+    height: 18px;
 }
 
 .param.is-bare .param-value {
     order: 1;
+    line-height: 18px;
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
     text-align: right;

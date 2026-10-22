@@ -52,7 +52,7 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
 
     const t = toSlider(def, value);
     return (
-        <div className={`param has-port ${modulated ? "is-modulated" : ""}`}>
+        <div className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""}`}>
             <label className="param-label" htmlFor={inputId}>
                 {def.label}
                 <output>
@@ -71,6 +71,15 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
                 style={{ "--t": t } as React.CSSProperties}
                 onChange={(e) => onChange(fromSlider(def, Number(e.target.value)))}
             />
+            {def.inputPort && (
+                <Handle
+                    id={def.inputPort}
+                    type="target"
+                    position={Position.Left}
+                    className="socket socket-audio"
+                    title={`Entrée « ${def.label} »`}
+                />
+            )}
             {isModulatable(def) && (
                 <Handle
                     id={modPort(def.id)}

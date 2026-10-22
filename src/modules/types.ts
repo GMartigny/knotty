@@ -32,6 +32,8 @@ export interface ParamDef {
     hidden?: boolean;
     /** `false` : pas de prise de modulation pour ce curseur. */
     modulatable?: false;
+    /** Entrée son affichée sur la ligne de ce curseur (ex. une voie du Mixeur). */
+    inputPort?: string;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output";

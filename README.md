@@ -28,6 +28,6 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 1. ~~Bruit → Filtre → Réverb → Sortie, câbles Verlet~~
 2. ~~Séquenceur (4 lignes × 16 pas, une sortie trigger par ligne) et câbles trigger~~
 3. ~~Oscillateur (sinus, carré, triangle, scie) avec mini-oscilloscope~~, débrancher un câble en tirant depuis sa prise
-4. ~~Enveloppe ADSR, Volume, prises de modulation sur les curseurs~~, Delay, Distorsion
+4. ~~Enveloppe ADSR, Volume, Mixeur 4 voies, prises de modulation sur les curseurs~~, Delay, Distorsion
 5. Impulsions lumineuses le long des câbles
 6. Sauvegarde locale, partage par URL

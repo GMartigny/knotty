@@ -87,6 +87,11 @@ class AudioEngine {
         return Tone.getContext().sampleRate;
     }
 
+    /** Horloge audio, en secondes : la référence pour savoir quels échantillons sont nouveaux. */
+    get audioTime() {
+        return Tone.getContext().currentTime;
+    }
+
     /** État affichable d'un module (ex. pas courant du séquenceur), -1 si aucun. */
     position(nodeId: string): number {
         if (!this.running) return -1;

@@ -24,7 +24,8 @@ export const sine: ModuleDef = {
         const source = new Tone.Oscillator({ type: SHAPES[values.shape] ?? "sine", volume: SOURCE_DB });
         const frequency = driven(source.frequency, paramDef(params, "frequency"), values.frequency);
         // Échantillons pour la mini-onde affichée dans le bloc.
-        const waveform = new Tone.Waveform(2048);
+        // ~0,34 s de mémoire à 48 kHz : assez pour caler l'onde jusqu'à ~7 Hz.
+        const waveform = new Tone.Waveform(16384);
         source.connect(waveform);
         return {
             scope: () => waveform.getValue(),

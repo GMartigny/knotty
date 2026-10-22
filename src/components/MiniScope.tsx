@@ -5,10 +5,11 @@ import { SOURCE_LEVEL } from "../modules/types";
 const W = 188;
 const H = 54;
 const PAD = 5;
-/** En dessous de cette fréquence, un cycle ne tient pas dans la mémoire : la courbe défile. */
-const SLOW_HZ = 40;
 const CYCLES = 3;
-const TRAIL = 140;
+/** Cycles minimum à caler dans la mémoire ; en dessous, la courbe défile. */
+const MIN_CYCLES = 1.5;
+/** Mode défilant : un point toutes les ~4 ms d'audio. */
+const TRAIL_STEP_S = 0.004;
 
 interface Props {
     nodeId: string;
@@ -35,7 +36,7 @@ const ideal = (shape: number, t: number) => {
 
 /**
  * Mini-oscilloscope : l'onde en direct, calée sur le début d'un cycle pour rester immobile.
- * Pour un signal lent, un tracé qui défile. Avant le lancement du son, la forme idéale.
+ * Pour un signal trop lent pour tenir en mémoire (< ~7 Hz), un tracé qui défile. Avant le lancement du son, la forme idéale.
  */
 export function MiniScope({ nodeId, frequency, shape }: Props) {
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -53,7 +54,8 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
         el.height = H * dpr;
         ctx.scale(dpr, dpr);
         const ink = getComputedStyle(el).getPropertyValue("--ink").trim() || "#1a1b3a";
-        const trail: number[] = [];
+        /** Mode défilant : valeurs horodatées sur l'horloge audio (s). */
+        const trail: { t: number; v: number }[] = [];
         let frame = 0;
 
         const y = (v: number) => H / 2 - v * (H / 2 - PAD);
@@ -91,19 +93,32 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
                 return;
             }
 
-            if (freq.current < SLOW_HZ) {
-                trail.push(samples[samples.length - 1] * gain);
-                if (trail.length > TRAIL) trail.shift();
-                draw(trail);
+            const len = samples.length;
+            const perCycle = engine.sampleRate / freq.current;
+
+            if (perCycle * (MIN_CYCLES + 1) > len) {
+                // Signal lent : la mémoire ne contient pas assez de cycles, la courbe défile.
+                // Le dernier échantillon correspond à l'horloge audio ; on ajoute un point toutes les
+                // ~4 ms d'audio écoulées depuis le dernier point, sans dépendre du rythme des images.
+                const sr = engine.sampleRate;
+                const now = engine.audioTime;
+                const lastT = trail.length ? trail[trail.length - 1].t : now - (len - 1) / sr;
+                for (let t = lastT + TRAIL_STEP_S; t <= now; t += TRAIL_STEP_S) {
+                    const back = Math.round((now - t) * sr);
+                    if (back < len) trail.push({ t, v: samples[len - 1 - back] * gain });
+                }
+                const windowS = Math.min(8, Math.max(1, 2 / freq.current));
+                while (trail.length && trail[0].t < now - windowS) trail.shift();
+                const step = Math.max(1, Math.floor(trail.length / 240));
+                draw(trail.filter((_, i) => i % step === 0).map((p) => p.v));
                 return;
             }
             trail.length = 0;
 
-            // Calage : premier passage par zéro en montant, puis ~3 cycles.
-            const perCycle = engine.sampleRate / freq.current;
-            const span = Math.min(samples.length - 1, Math.round(perCycle * CYCLES));
+            // Calage : dernier passage par zéro en montant qui laisse la place d'afficher ~3 cycles.
+            const span = Math.min(Math.round(perCycle * CYCLES), len - 1 - Math.ceil(perCycle));
             let start = 0;
-            for (let i = 1; i < samples.length - span; i++) {
+            for (let i = len - span - 1; i > 0; i--) {
                 if (samples[i - 1] < 0 && samples[i] >= 0) {
                     start = i;
                     break;

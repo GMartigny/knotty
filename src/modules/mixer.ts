@@ -3,7 +3,7 @@ import type { ModuleDef, ParamDef } from "./types";
 
 /** Channels shown by a new mixer, and the most it can have. */
 export const MIXER_CHANNELS = 4;
-export const MIXER_MAX_CHANNELS = 8;
+export const MIXER_MAX_CHANNELS = 16;
 export const channelInput = (i: number) => `in${i + 1}`;
 export const channelLevel = (i: number) => `level${i + 1}`;
 
@@ -23,7 +23,7 @@ const levels: ParamDef[] = Array.from({ length: MIXER_MAX_CHANNELS }, (_, i) => 
     inputPort: channelInput(i),
 }));
 
-/** Mixes up to 8 sounds, each with its own level, into a single output. */
+/** Mixes up to 16 sounds, each with its own level, into a single output. */
 export const mixer: ModuleDef = {
     type: "mixer",
     label: "Mixer",

@@ -33,14 +33,14 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
 });
 
 /**
- * Example patch: a little tune on the sequencer's 4 tracks.
+ * "Groove" patch: a little tune on a 5-row sequencer.
  *  1. Kick — low sine, short envelope, on the beats
  *  2. Snare — noise, envelope, band-pass, beats 2 and 4
  *  3. Hi-hat — the same noise, very short envelope, high-pass, on the offbeats
  *  4. Bass — sawtooth, envelope, low-pass swept by a slow oscillator
- * Everything goes through a mixer, a light reverb and the output.
- * Melody — on a second sequencer: a triangle around 800 Hz whose pitch is swayed
- * by a slow sine (attenuated by a Volume), so each note lands on a different pitch.
+ *  5. Melody — a triangle around 800 Hz whose pitch is swayed by a slow sine
+ *     (attenuated by a Volume), so each note lands on a different pitch
+ * A 5-channel mixer, a light reverb and the output.
  */
 function groovePatch(): Patch {
     // One row per track; envelopes are ~420 px tall.
@@ -55,7 +55,7 @@ function groovePatch(): Patch {
         // Comment frames, to find your way around
         note("note-drums", -40, -70, 1360, 1420, "Drums: kick, snare and hi-hat (sequencer rows 1 to 3)"),
         note("note-bass", 420, 1360, 900, 710, "Bass (row 4), its filter swept by a slow oscillator"),
-        note("note-melody", -300, MEL_Y - 90, 1620, 770, "Melody: a triangle whose pitch is swayed by a slow sine"),
+        note("note-melody", -200, MEL_Y - 90, 1220, 520, "Melody (row 5): a triangle whose pitch is swayed by a slow sine"),
         note("note-mix", 1340, 730, 900, 380, "Mix: every track → reverb → output"),
 
         node("seq", "sequencer", 0, row(1) + 330, {
@@ -64,6 +64,9 @@ function groovePatch(): Patch {
             row1: steps(5, 13),
             row2: steps(3, 7, 11, 15, 16),
             row3: steps(1, 4, 7, 9, 11, 14),
+            // Row 5: the melody, on the same sequencer.
+            rows: 5,
+            row4: steps(1, 4, 7, 9, 10, 13, 15),
         }),
 
         // 1. Kick
@@ -83,23 +86,16 @@ function groovePatch(): Patch {
         node("bass-filter", "filter", colFilter, row(3) + 60, { mode: 0, frequency: 520, Q: 7 }),
         node("lfo", "sine", colSource, row(3) + 340, { shape: 0, frequency: 0.25 }),
 
-        // Melody: its own sequencer, locked to the same tempo
-        node("mel-seq", "sequencer", 0, MEL_Y, {
-            bpm: 116,
-            row0: steps(1, 4, 7, 9, 10, 13, 15),
-            row1: 0,
-            row2: 0,
-            row3: 0,
-        }),
+        // Melody, on row 5 of the sequencer
         node("mel-osc", "sine", colSource, MEL_Y, { shape: 2, frequency: 800 }),
-        node("mel-lfo", "sine", -260, MEL_Y + 340, { shape: 0, frequency: 0.37 }),
+        node("mel-lfo", "sine", -160, MEL_Y, { shape: 0, frequency: 0.37 }),
         // Sway depth: −14 dB ≈ ±20% around 800 Hz.
-        node("mel-depth", "volume", 80, MEL_Y + 340, { volume: -14 }),
+        node("mel-depth", "volume", 160, MEL_Y + 20, { volume: -14 }),
         node("mel-env", "envelope", colEnv, MEL_Y - 20, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
-        node("mel-vol", "volume", colFilter, MEL_Y + 40, { volume: -5 }),
 
         // Mix and output
-        node("mix", "mixer", 1380, row(1) + 330, { level1: 100, level2: 55, level3: 35, level4: 65 }),
+        // One channel per track, the melody included.
+        node("mix", "mixer", 1380, row(1) + 330, { channels: 5, level1: 100, level2: 55, level3: 35, level4: 65, level5: 56 }),
         node("reverb", "reverb", 1680, row(1) + 350, { decay: 2.2, wet: 0.22 }),
         node("out", "output", 1980, row(1) + 400),
     ];
@@ -127,12 +123,11 @@ function groovePatch(): Patch {
         cable("bass-filter", "out", "mix", "in4"),
         cable("lfo", "out", "bass-filter", "mod:frequency"),
 
-        cable("mel-seq", "row0", "mel-env", "gate", "trigger"),
+        cable("seq", "row4", "mel-env", "gate", "trigger"),
         cable("mel-lfo", "out", "mel-depth", "in"),
         cable("mel-depth", "out", "mel-osc", "mod:frequency"),
         cable("mel-osc", "out", "mel-env", "in"),
-        cable("mel-env", "out", "mel-vol", "in"),
-        cable("mel-vol", "out", "reverb", "in"),
+        cable("mel-env", "out", "mix", "in5"),
 
         cable("mix", "out", "reverb", "in"),
         cable("reverb", "out", "out", "in"),
@@ -174,18 +169,18 @@ function softPatch(): Patch {
 /**
  * "Metal" patch: a full band at 150 bpm, on two sequencers.
  *
- * Drums ("drums" sequencer) — track 1: galloping double kick (very dry low sine);
- * track 2: snare on 2 and 4 (noise, band-pass); track 3: eighth-note hi-hat (noise,
- * high-pass); track 4: crash at the start of the bar (noise, long ring). "Drums" mixer.
+ * Rhythm section ("drums" sequencer, 5 rows) — row 1: galloping double kick (very dry low sine);
+ * row 2: snare on 2 and 4 (noise, band-pass); row 3: eighth-note hi-hat (noise, high-pass);
+ * row 4: crash at the start of the bar (noise, long ring); row 5: eighth-note bass (low square,
+ * low-pass), locked to the drums.
  *
- * Band ("band" sequencer) — track 1: rhythm guitar, E + B power chord in sawtooth,
+ * Guitars ("band" sequencer, 2 rows) — row 1: rhythm guitar, E + B power chord in sawtooth,
  * palm-muted "chug" locked to the double kick, heavily distorted then filtered like a speaker cab;
- * track 2: eighth-note bass (low square, low-pass); track 3: two lead guitars in harmony —
- * a slow triangle sweeps two Scales: E minor for the first, G major (the same notes, shifted
- * by one degree) for the second, which therefore plays a third above, like twin guitars.
- * Crisp attacks, barely slurred, light vibrato; heavily distorted and filtered like a cab, subtle echo.
+ * row 2: two lead guitars in harmony — a slow triangle sweeps two Scales: E minor for the first,
+ * G major (the same notes, shifted by one degree) for the second, which therefore plays a third
+ * above, like twin guitars. Crisp attacks, barely slurred, light vibrato; distorted, cab-filtered, subtle echo.
  *
- * Main mixer → subtle reverb → output.
+ * A 7-channel mixer (one per instrument) → subtle reverb → output.
  */
 function metalPatch(): Patch {
     // Columns: triggering, sources, envelopes, processing, mixing.
@@ -195,7 +190,6 @@ function metalPatch(): Patch {
     const cFx1 = 1060;
     const cFx2 = 1360;
     const cFx3 = 1660;
-    const cMix = 1980;
     const cBus = 2300;
     const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
     const dry = { attack: 0.001, sustain: 0, hold: 0.005 };
@@ -204,10 +198,10 @@ function metalPatch(): Patch {
 
     const nodes: ModuleNode[] = [
         // ——— Comment frames, to find your way around ———
-        note("note-drums", -40, -70, 1360, 1900, "Drums: kick, snare, hi-hat and cymbal"),
-        note("note-band", -40, 1845, 1660, 1040, "Rhythm guitar (E + B power chord) and bass"),
+        note("note-drums", -40, -70, 1360, 1900, "Rhythm section: kick, snare, hi-hat, cymbal, and row 5 drives the bass below"),
+        note("note-band", -40, 1845, 1660, 1040, "Guitars on a 2-row sequencer: rhythm (E + B power chord) and solo. Plus the bass"),
         note("note-solo", -380, SOLO_Y - 100, 2300, 1320, "Two lead guitars in harmony: the second one plays a third above"),
-        note("note-mix", 1940, 630, 1220, 1370, "Mix: every track → reverb → output"),
+        note("note-mix", 2260, 1630, 900, 360, "Mix: one channel per instrument → reverb → output"),
 
         // ——— Drums ———
         node("drums", "sequencer", cSeq, 700, {
@@ -216,6 +210,9 @@ function metalPatch(): Patch {
             row1: steps(5, 13),
             row2: steps(1, 3, 5, 7, 9, 11, 13, 15),
             row3: steps(1),
+            // The bass locks to the drums: eighth notes, on the same sequencer.
+            rows: 5,
+            row4: steps(1, 3, 5, 7, 9, 11, 13, 15),
         }),
         node("kick-osc", "sine", cSrc, 60, { shape: 0, frequency: 50 }),
         node("kick-env", "envelope", cEnv, 0, { ...dry, decay: 0.11, release: 0.04 }),
@@ -226,16 +223,15 @@ function metalPatch(): Patch {
         node("hat-filter", "filter", cFx1, 1000, { mode: 1, frequency: 9000, Q: 0.7 }),
         node("crash-env", "envelope", cEnv, 1410, { ...dry, decay: 1.4, release: 0.5 }),
         node("crash-filter", "filter", cFx1, 1470, { mode: 1, frequency: 5500, Q: 0.7 }),
-        node("drum-mix", "mixer", cMix, 700, { level1: 100, level2: 80, level3: 30, level4: 35 }),
 
         // ——— Rhythm guitar ———
+        // Guitars: rhythm on row 1, solo on row 2. Two rows are all it needs.
         node("band", "sequencer", cSeq, 2420, {
             bpm: 150,
+            rows: 2,
             row0: gallop,
-            row1: steps(1, 3, 5, 7, 9, 11, 13, 15),
             // Solo: few notes, held, on the offbeats.
-            row2: steps(1, 4, 7, 9, 12, 15),
-            row3: 0,
+            row1: steps(1, 4, 7, 9, 12, 15),
         }),
         node("gtr-root", "sine", cSrc, 1900, { shape: 3, frequency: 82.4 }),
         node("gtr-fifth", "sine", cSrc, 2230, { shape: 3, frequency: 123.5 }),
@@ -270,7 +266,17 @@ function metalPatch(): Patch {
         node("harm-dist", "distortion", cFx1, HARM_Y, { drive: 45, wet: 1 }),
 
         // ——— Mix ———
-        node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 45 }),
+        // One channel per instrument: kick, snare, hi-hat, cymbal, rhythm guitar, bass, solos.
+        node("bus", "mixer", cBus, 1700, {
+            channels: 7,
+            level1: 90,
+            level2: 72,
+            level3: 27,
+            level4: 32,
+            level5: 70,
+            level6: 75,
+            level7: 45,
+        }),
         node("reverb", "reverb", cBus + 300, 1720, { decay: 1.8, wet: 0.15 }),
         node("out", "output", cBus + 600, 1780),
     ];
@@ -288,10 +294,6 @@ function metalPatch(): Patch {
         cable("snare-env", "out", "snare-filter", "in"),
         cable("hat-env", "out", "hat-filter", "in"),
         cable("crash-env", "out", "crash-filter", "in"),
-        cable("kick-env", "out", "drum-mix", "in1"),
-        cable("snare-filter", "out", "drum-mix", "in2"),
-        cable("hat-filter", "out", "drum-mix", "in3"),
-        cable("crash-filter", "out", "drum-mix", "in4"),
 
         // Rhythm guitar
         cable("band", "row0", "gtr-env", "gate", "trigger"),
@@ -301,13 +303,13 @@ function metalPatch(): Patch {
         cable("gtr-dist", "out", "gtr-cab", "in"),
 
         // Bass
-        cable("band", "row1", "bass-env", "gate", "trigger"),
+        cable("drums", "row4", "bass-env", "gate", "trigger"),
         cable("bass-osc", "out", "bass-env", "in"),
         cable("bass-env", "out", "bass-filter", "in"),
 
         // Lead guitar
         cable("lead-sweep", "out", "lead-scale", "in"),
-        cable("band", "row2", "lead-scale", "gate", "trigger"),
+        cable("band", "row1", "lead-scale", "gate", "trigger"),
         cable("lead-scale", "out", "lead-osc", "note", "trigger"),
         cable("lead-scale", "out", "lead-env", "gate", "trigger"),
         cable("vibrato", "out", "vibrato-depth", "in"),
@@ -318,7 +320,7 @@ function metalPatch(): Patch {
         cable("lead-echo", "out", "lead-filter", "in"),
         // Second guitar, in harmony: same sweep, same rhythm, same vibrato, same echo.
         cable("lead-sweep", "out", "harm-scale", "in"),
-        cable("band", "row2", "harm-scale", "gate", "trigger"),
+        cable("band", "row1", "harm-scale", "gate", "trigger"),
         cable("harm-scale", "out", "harm-osc", "note", "trigger"),
         cable("harm-scale", "out", "harm-env", "gate", "trigger"),
         cable("vibrato-depth", "out", "harm-osc", "mod:frequency"),
@@ -327,10 +329,13 @@ function metalPatch(): Patch {
         cable("harm-dist", "out", "lead-echo", "in"),
 
         // Mix
-        cable("drum-mix", "out", "bus", "in1"),
-        cable("gtr-cab", "out", "bus", "in2"),
-        cable("bass-filter", "out", "bus", "in3"),
-        cable("lead-filter", "out", "bus", "in4"),
+        cable("kick-env", "out", "bus", "in1"),
+        cable("snare-filter", "out", "bus", "in2"),
+        cable("hat-filter", "out", "bus", "in3"),
+        cable("crash-filter", "out", "bus", "in4"),
+        cable("gtr-cab", "out", "bus", "in5"),
+        cable("bass-filter", "out", "bus", "in6"),
+        cable("lead-filter", "out", "bus", "in7"),
         cable("bus", "out", "reverb", "in"),
         cable("reverb", "out", "out", "in"),
     ];

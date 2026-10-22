@@ -4,7 +4,7 @@ import type { ModuleDef, ParamDef, TriggerListener } from "./types";
 
 /** Rows shown by a new sequencer, and the most it can have. */
 export const SEQ_ROWS = 4;
-export const SEQ_MAX_ROWS = 8;
+export const SEQ_MAX_ROWS = 16;
 export const SEQ_STEPS = 16;
 
 /** Starting patterns, one integer per row: bit i turns step i on. */

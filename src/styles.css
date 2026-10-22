@@ -650,6 +650,66 @@ button {
     stroke-dasharray: 2 10;
 }
 
+/* ——— Tout effacer ——— */
+
+.clear-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 64px;
+    min-width: 64px;
+    padding: 0 12px;
+    justify-content: center;
+    border-radius: 999px;
+    border: 4px solid var(--ink);
+    background: var(--cream);
+    box-shadow: 0 6px 0 var(--ink);
+    font-weight: 700;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+}
+
+.clear-x {
+    font-size: 2.6rem;
+    line-height: 1;
+    margin-top: -4px;
+}
+
+.clear-button:hover {
+    transform: translateY(-2px) rotate(-6deg);
+    box-shadow: 0 8px 0 var(--ink);
+}
+
+.clear-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 1px 0 var(--ink);
+}
+
+.clear-button.is-armed {
+    padding: 0 22px 0 16px;
+    background: #ff5d5d;
+    animation: clear-shake 0.35s;
+}
+
+.clear-label {
+    font-size: 1.05rem;
+}
+
+@keyframes clear-shake {
+    25% {
+        transform: rotate(-5deg);
+    }
+    50% {
+        transform: rotate(4deg);
+    }
+    75% {
+        transform: rotate(-2deg);
+    }
+}
+
 /* ——— Démarrage ——— */
 
 .start {

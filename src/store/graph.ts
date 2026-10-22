@@ -67,6 +67,8 @@ interface GraphState {
     addModule(type: string, position: XYPosition): void;
     setParam(nodeId: string, paramId: string, value: number): void;
     removeNode(nodeId: string): void;
+    /** Supprime tous les blocs, en cascade. */
+    clearAll(): void;
 }
 
 let counter = 0;
@@ -227,6 +229,15 @@ export const useGraph = create<GraphState>((set, get) => ({
                 n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
             ),
         }),
+
+    clearAll() {
+        // Les blocs tombent l'un après l'autre, de gauche à droite.
+        const ids = get()
+            .nodes.filter((n) => !n.data.removing)
+            .sort((a, b) => a.position.x - b.position.x)
+            .map((n) => n.id);
+        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * 70));
+    },
 
     removeNode(nodeId) {
         const node = get().nodes.find((n) => n.id === nodeId);

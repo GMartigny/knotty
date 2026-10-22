@@ -13,6 +13,7 @@ import { engine } from "./audio/engine";
 import { ModuleBlock } from "./components/ModuleBlock";
 import { CableEdge } from "./cables/CableEdge";
 import { DRAG_TYPE, Palette } from "./components/Palette";
+import { ClearButton } from "./components/ClearButton";
 
 const nodeTypes = { module: ModuleBlock };
 const edgeTypes = { cable: CableEdge };
@@ -101,6 +102,8 @@ function Workbench() {
                 >
                     <Background variant={BackgroundVariant.Dots} gap={28} size={3} color="var(--peg)" />
                 </ReactFlow>
+
+                <ClearButton />
 
                 {!started && (
                     <div className="start">

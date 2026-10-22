@@ -11,6 +11,8 @@ const levels: ParamDef[] = Array.from({ length: MIXER_MAX_CHANNELS }, (_, i) => 
     id: channelLevel(i),
     row: i,
     label: `Channel ${i + 1}`,
+    // The row speaks for itself: one slider per channel, no label.
+    bare: true,
     min: 0,
     max: 100,
     default: 75,

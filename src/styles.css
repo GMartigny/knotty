@@ -297,6 +297,20 @@ button {
     font-variant-numeric: tabular-nums;
 }
 
+/* Bare setting (Mixer channel): the slider, then its value on the same line. */
+.param.is-bare {
+    grid-template-columns: 1fr 3.2em;
+    align-items: center;
+    gap: 8px;
+}
+
+.param.is-bare .param-value {
+    order: 1;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
 .slider {
     --t: 0.5;
     appearance: none;

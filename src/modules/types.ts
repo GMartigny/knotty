@@ -39,6 +39,8 @@ export interface ParamDef {
     inputPort?: string;
     /** Row this setting belongs to, on a block with a variable number of rows (see `ModuleDef.rows`). */
     row?: number;
+    /** Show only the slider and its value, without the label (still read by screen readers). */
+    bare?: boolean;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";

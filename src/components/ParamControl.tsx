@@ -54,16 +54,26 @@ export function ParamControl({ def, value, onChange, modulated, row }: Props) {
 
     const t = toSlider(def, value);
     return (
-        <div className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""}`} data-row={row}>
-            <label className="param-label" htmlFor={inputId}>
-                {def.label}
-                <output>
-                    {modulated && <span className="mod-badge" aria-label="modulated">∿ </span>}
+        <div
+            className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""} ${def.bare ? "is-bare" : ""}`}
+            data-row={row}
+        >
+            {def.bare ? (
+                <output className="param-value" htmlFor={inputId}>
                     {format(def, value)}
                 </output>
-            </label>
+            ) : (
+                <label className="param-label" htmlFor={inputId}>
+                    {def.label}
+                    <output>
+                        {modulated && <span className="mod-badge" aria-label="modulated">∿ </span>}
+                        {format(def, value)}
+                    </output>
+                </label>
+            )}
             <input
                 id={inputId}
+                aria-label={def.bare ? def.label : undefined}
                 className="slider nodrag"
                 type="range"
                 min={0}

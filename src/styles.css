@@ -111,6 +111,33 @@ button {
     box-shadow: 0 1px 0 var(--accent);
 }
 
+.palette-item {
+    touch-action: none;
+    user-select: none;
+}
+
+.palette-item.is-dragging {
+    opacity: 0.5;
+}
+
+/* Bloc qui suit le pointeur pendant le glisser depuis la palette. */
+.drag-ghost {
+    position: fixed;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--cream);
+    color: var(--ink);
+    border: var(--outline) solid var(--ink);
+    border-radius: 14px;
+    box-shadow: 0 10px 0 var(--accent);
+    font-weight: 700;
+    pointer-events: none;
+    transform: translate(-30%, -50%) rotate(-4deg) scale(1.05);
+}
+
 .palette-icon {
     display: grid;
     place-items: center;
@@ -706,6 +733,51 @@ button {
 
 .block.is-off .block-name {
     opacity: 0.6;
+}
+
+/* ——— Tapis vide ——— */
+
+.empty-mat {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 16px;
+    padding: 16px;
+    color: var(--cream);
+    text-align: center;
+    pointer-events: none;
+}
+
+.empty-mat p {
+    margin: 0;
+    max-width: 32ch;
+    font-size: 1.05rem;
+    line-height: 1.4;
+    opacity: 0.8;
+}
+
+.example-button {
+    pointer-events: auto;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: 4px solid var(--ink);
+    background: var(--cable-trigger);
+    font-size: 1.15rem;
+    font-weight: 700;
+    box-shadow: 0 6px 0 var(--ink);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.example-button:hover {
+    transform: translateY(-2px) rotate(-1.5deg);
+    box-shadow: 0 8px 0 var(--ink);
+}
+
+.example-button:active {
+    transform: translateY(5px);
+    box-shadow: 0 1px 0 var(--ink);
 }
 
 /* ——— Tout effacer ——— */

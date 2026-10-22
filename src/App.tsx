@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
     Background,
     BackgroundVariant,
@@ -12,8 +12,9 @@ import { useGraph } from "./store/graph";
 import { engine } from "./audio/engine";
 import { ModuleBlock } from "./components/ModuleBlock";
 import { CableEdge } from "./cables/CableEdge";
-import { DRAG_TYPE, Palette } from "./components/Palette";
+import { Palette } from "./components/Palette";
 import { ClearButton } from "./components/ClearButton";
+import { EmptyMat } from "./components/EmptyMat";
 
 const nodeTypes = { module: ModuleBlock };
 const edgeTypes = { cable: CableEdge };
@@ -38,39 +39,34 @@ function Workbench() {
     const { screenToFlowPosition } = useReactFlow();
     const [started, setStarted] = useState(engine.isRunning);
 
+    const mat = useRef<HTMLElement>(null);
+
     const addAtCenter = useCallback(
         (type: string) => {
-            const position = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+            const r = mat.current?.getBoundingClientRect();
+            const center = r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+            const position = screenToFlowPosition(center);
             addModule(type, { x: position.x - 110, y: position.y - 80 });
         },
         [addModule, screenToFlowPosition],
     );
 
+    /** Bloc lâché depuis la palette : ajouté là où il tombe, s'il tombe sur le tapis. */
     const onDrop = useCallback(
-        (e: React.DragEvent) => {
-            const type = e.dataTransfer.getData(DRAG_TYPE);
-            if (!type) return;
-            e.preventDefault();
-            const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        (type: string, clientX: number, clientY: number) => {
+            const r = mat.current?.getBoundingClientRect();
+            if (!r || clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return false;
+            const position = screenToFlowPosition({ x: clientX, y: clientY });
             addModule(type, { x: position.x - 110, y: position.y - 30 });
+            return true;
         },
         [addModule, screenToFlowPosition],
     );
 
     return (
         <div className="app">
-            <Palette onAdd={addAtCenter} />
-            <main
-                className="mat"
-                data-grab={grabbing}
-                onDragOver={(e) => {
-                    if (e.dataTransfer.types.includes(DRAG_TYPE)) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "copy";
-                    }
-                }}
-                onDrop={onDrop}
-            >
+            <Palette onAdd={addAtCenter} onDrop={onDrop} />
+            <main ref={mat} className="mat" data-grab={grabbing}>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
@@ -97,13 +93,14 @@ function Workbench() {
                         return false;
                     }}
                     fitView
-                    fitViewOptions={{ padding: 0.25 }}
+                    fitViewOptions={{ padding: 0.15 }}
                     proOptions={{ hideAttribution: true }}
                 >
                     <Background variant={BackgroundVariant.Dots} gap={28} size={3} color="var(--peg)" />
                 </ReactFlow>
 
                 <ClearButton />
+                <EmptyMat />
 
                 {!started && (
                     <div className="start">

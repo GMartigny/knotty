@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import { compatible, portKind, registry } from "../modules/registry";
 import { loadPatch, savePatch } from "./persist";
+import { examplePatch } from "./example";
 import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
 
 export interface ModuleData extends Record<string, unknown> {
@@ -73,6 +74,8 @@ interface GraphState {
     removeNode(nodeId: string): void;
     /** Supprime tous les blocs, en cascade. */
     clearAll(): void;
+    /** Remplace le tapis par le patch d'exemple. */
+    loadExample(): void;
 }
 
 let counter = 0;
@@ -84,37 +87,6 @@ const makeNode = (type: string, position: XYPosition, id = newId(type), params: 
     position,
     data: { type, params: { ...defaultParams(registry[type]), ...params } },
 });
-
-/**
- * Patch de départ : Bruit → Enveloppe → Filtre → Réverb → Sortie,
- * l'Enveloppe étant déclenchée par la ligne 1 du Séquenceur (un charley).
- */
-const initialNodes: ModuleNode[] = [
-    makeNode("sequencer", { x: 40, y: 560 }, "sequencer-1"),
-    makeNode("noise", { x: 40, y: 120 }, "noise-1"),
-    makeNode("envelope", { x: 340, y: 40 }, "envelope-1", { attack: 0.002, decay: 0.08, sustain: 0, hold: 0.01, release: 0.05 }),
-    makeNode("filter", { x: 640, y: 60 }, "filter-1"),
-    makeNode("reverb", { x: 940, y: 180 }, "reverb-1"),
-    makeNode("output", { x: 1240, y: 100 }, "output-1"),
-];
-
-const cable = (source: string, target: string, kind: PortKind = "audio", sourceHandle = "out", targetHandle = "in"): CableEdge => ({
-    id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
-    source,
-    sourceHandle,
-    target,
-    targetHandle,
-    type: "cable",
-    data: { kind },
-});
-
-const initialEdges: CableEdge[] = [
-    cable("sequencer-1", "envelope-1", "trigger", "row0", "gate"),
-    cable("noise-1", "envelope-1"),
-    cable("envelope-1", "filter-1"),
-    cable("filter-1", "reverb-1"),
-    cable("reverb-1", "output-1"),
-];
 
 /** Taille supposée d'un nouveau bloc tant qu'il n'est pas mesuré. */
 const NEW_BLOCK = { width: 240, height: 230 };
@@ -165,7 +137,7 @@ const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
 };
 
 /** Patch restauré depuis le navigateur, sinon le patch d'exemple. */
-const restored = loadPatch() ?? { nodes: initialNodes, edges: initialEdges };
+const restored = loadPatch() ?? examplePatch();
 
 export const useGraph = create<GraphState>((set, get) => ({
     nodes: restored.nodes,
@@ -241,6 +213,11 @@ export const useGraph = create<GraphState>((set, get) => ({
                 n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
             ),
         }),
+
+    loadExample() {
+        // Le moteur audio fait la différence : les anciens blocs sont détruits, les nouveaux créés.
+        set(examplePatch());
+    },
 
     clearAll() {
         // Les blocs tombent l'un après l'autre, de gauche à droite.

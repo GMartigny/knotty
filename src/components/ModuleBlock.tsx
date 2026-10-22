@@ -79,6 +79,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                 compact && "is-compact",
                 selected && "is-selected",
                 data.removing && "is-removing",
+                def.type === "output" && data.params.on === 0 && "is-off",
             ]
                 .filter(Boolean)
                 .join(" ")}
@@ -89,6 +90,19 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                     {def.icon}
                 </span>
                 <span className="block-name">{def.label}</span>
+                {def.type === "output" && (
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={data.params.on !== 0}
+                        aria-label="Son de la sortie"
+                        title={data.params.on !== 0 ? "Couper le son" : "Rétablir le son"}
+                        className="toggle nodrag"
+                        onClick={() => setParam(id, "on", data.params.on !== 0 ? 0 : 1)}
+                    >
+                        <span className="toggle-knob" aria-hidden />
+                    </button>
+                )}
                 <button className="block-remove nodrag" type="button" aria-label={`Retirer ${def.label}`} onClick={() => removeNode(id)}>
                     ×
                 </button>

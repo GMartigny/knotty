@@ -1,0 +1,417 @@
+/* Knotty — un tapis de jeu indigo, des blocs-jouets crème cerclés d'encre, des câbles en caoutchouc. */
+
+:root {
+    --mat: #2b2d5c;
+    --peg: #3d4080;
+    --ink: #1a1b3a;
+    --cream: #fff6e5;
+    --cream-shade: #f1e3c8;
+    --cable-audio: #ff8c42;
+    --cable-trigger: #ffd166;
+    --outline: 3px;
+    font-family: "Fredoka", system-ui, sans-serif;
+    color: var(--ink);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: var(--mat);
+    overflow: hidden;
+}
+
+button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+:focus-visible {
+    outline: 3px solid var(--cable-trigger);
+    outline-offset: 2px;
+}
+
+.app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    height: 100%;
+}
+
+/* ——— Palette ——— */
+
+.palette {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 2;
+}
+
+.logo {
+    margin: 0;
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.palette-hint {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    opacity: 0.7;
+}
+
+.palette ul {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.palette-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--cream);
+    color: var(--ink);
+    border: var(--outline) solid var(--ink);
+    border-radius: 14px;
+    box-shadow: 0 4px 0 var(--accent);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: grab;
+    transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.palette-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 var(--accent);
+}
+
+.palette-item:active {
+    cursor: grabbing;
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--accent);
+}
+
+.palette-icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--ink);
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* ——— Tapis ——— */
+
+.mat {
+    position: relative;
+    background: var(--mat);
+}
+
+.react-flow__pane {
+    cursor: default;
+}
+
+/* ——— Blocs ——— */
+
+.block {
+    --level: 0;
+    position: relative;
+    width: 220px;
+    background: var(--cream);
+    border: var(--outline) solid var(--ink);
+    border-radius: 20px;
+    box-shadow:
+        0 6px 0 var(--ink),
+        0 0 calc(var(--level) * 36px) calc(var(--level) * 6px) var(--accent);
+    transform: scale(calc(1 + var(--level) * 0.035));
+    transition: transform 0.06s linear;
+}
+
+.react-flow__node.dragging .block {
+    transform: rotate(-2deg) scale(1.03);
+    box-shadow: 0 14px 0 rgba(26, 27, 58, 0.55);
+}
+
+.block.is-selected {
+    outline: 3px dashed var(--cream);
+    outline-offset: 6px;
+}
+
+.block-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--accent);
+    border-bottom: var(--outline) solid var(--ink);
+    border-radius: 17px 17px 0 0;
+}
+
+.block-icon {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: 2px solid var(--ink);
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.block-name {
+    flex: 1;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.block-remove {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--cream);
+    line-height: 1;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.block:hover .block-remove,
+.block-remove:focus-visible {
+    opacity: 1;
+}
+
+.block-body {
+    padding: 10px 14px 14px;
+    display: grid;
+    gap: 10px;
+}
+
+/* ——— Réglages ——— */
+
+.param {
+    display: grid;
+    gap: 4px;
+}
+
+.param-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.param-label output {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+.slider {
+    --t: 0.5;
+    appearance: none;
+    width: 100%;
+    height: 14px;
+    margin: 0;
+    border-radius: 999px;
+    border: 2px solid var(--ink);
+    background: linear-gradient(to right, var(--accent) calc(var(--t) * 100%), var(--cream-shade) 0);
+    cursor: pointer;
+}
+
+.slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: var(--outline) solid var(--ink);
+    box-shadow: 0 2px 0 var(--ink);
+}
+
+.slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--cream);
+    border: var(--outline) solid var(--ink);
+    box-shadow: 0 2px 0 var(--ink);
+}
+
+.segmented {
+    display: flex;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.segmented button {
+    flex: 1;
+    padding: 3px 0;
+    border: 0;
+    background: var(--cream-shade);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.segmented button + button {
+    border-left: 2px solid var(--ink);
+}
+
+.segmented button.is-on {
+    background: var(--accent);
+}
+
+/* ——— Prises ——— */
+
+.react-flow__handle.socket {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: var(--outline) solid var(--cream);
+    box-shadow: 0 0 0 var(--outline) var(--ink);
+    transition: transform 0.12s;
+}
+
+.react-flow__handle.socket::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--cable-audio);
+}
+
+.react-flow__handle.socket-trigger::after {
+    background: var(--cable-trigger);
+}
+
+.react-flow__handle-left.socket {
+    left: -13px;
+}
+
+.react-flow__handle-right.socket {
+    right: -13px;
+}
+
+.react-flow__handle.socket:hover,
+.react-flow__handle.socket.connectingto.valid {
+    transform: translate(0, -50%) scale(1.35);
+}
+
+.react-flow__handle.socket.connectingfrom ~ *,
+.react-flow__handle.socket.connectingto:not(.valid) {
+    opacity: 0.4;
+}
+
+/* ——— Câbles ——— */
+
+.cable {
+    --level: 0;
+    pointer-events: none;
+}
+
+.cable-shadow {
+    stroke: var(--ink);
+    stroke-width: 11px;
+    stroke-linecap: round;
+}
+
+.cable-main {
+    stroke: var(--cable-color, var(--cable-audio));
+    stroke-width: 6px;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 calc(var(--level) * 8px) var(--cable-color, var(--cable-audio)));
+}
+
+.cable .react-flow__edge-interaction {
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.react-flow__edge:hover .cable-shadow {
+    stroke-width: 14px;
+}
+
+.cable.is-selected .cable-shadow {
+    stroke: var(--cream);
+}
+
+.cable.is-dragging .cable-main {
+    stroke-dasharray: 2 10;
+}
+
+/* ——— Démarrage ——— */
+
+.start {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 14px;
+    background: rgba(43, 45, 92, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+    color: var(--cream);
+    text-align: center;
+}
+
+.start p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.start-button {
+    padding: 22px 40px;
+    border-radius: 999px;
+    border: 4px solid var(--ink);
+    background: var(--cable-trigger);
+    font-size: 1.5rem;
+    font-weight: 700;
+    box-shadow: 0 8px 0 var(--ink);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.start-button:hover {
+    transform: translateY(-2px) rotate(-1.5deg);
+    box-shadow: 0 10px 0 var(--ink);
+}
+
+.start-button:active {
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .block {
+        transform: none;
+        transition: none;
+    }
+    .start-button,
+    .palette-item {
+        transition: none;
+    }
+}

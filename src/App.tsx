@@ -30,7 +30,8 @@ function DraggingCable({ fromX, fromY, toX, toY }: ConnectionLineComponentProps)
 }
 
 function Workbench() {
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, isValidConnection, addModule } = useGraph();
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, isValidConnection, addModule, startGrab, endGrab } =
+        useGraph();
     const { screenToFlowPosition } = useReactFlow();
     const [started, setStarted] = useState(engine.isRunning);
 
@@ -74,6 +75,10 @@ function Workbench() {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
+                    onConnectStart={(_, { nodeId, handleId, handleType }) => {
+                        if (nodeId && handleId && handleType) startGrab({ nodeId, handleId, side: handleType });
+                    }}
+                    onConnectEnd={(_, connection) => endGrab(!connection.toHandle)}
                     isValidConnection={isValidConnection}
                     connectionLineComponent={DraggingCable}
                     connectionRadius={40}

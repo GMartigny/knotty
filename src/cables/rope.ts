@@ -60,6 +60,10 @@ export class Rope {
     private b: Vec;
     private awake = true;
     private calmFrames = 0;
+    private pinA = true;
+    private pinB = true;
+    /** Longueur de segment figée une fois le câble débranché. */
+    private frozenSegment?: number;
 
     constructor(a: Vec, b: Vec) {
         this.a = { ...a };
@@ -86,7 +90,8 @@ export class Rope {
         this.b = { ...b };
         this.awake = true;
         this.calmFrames = 0;
-        this.adaptResolution();
+        // Un câble débranché garde sa résolution : il ne fait que tomber.
+        if (this.frozenSegment === undefined) this.adaptResolution();
     }
 
     /** Ajuste le nombre de points à la longueur du câble. */
@@ -107,15 +112,38 @@ export class Rope {
         this.prev = points.map((p, i) => ({ x: p.x - values[i].x, y: p.y - values[i].y }));
     }
 
+    /**
+     * Débranche une extrémité : elle n'est plus épinglée à sa prise et tombe avec la gravité.
+     * La longueur du câble est figée à ce moment-là.
+     */
+    release(end: "a" | "b") {
+        if (end === "a") this.pinA = false;
+        else this.pinB = false;
+        this.frozenSegment ??= this.restSegment();
+        this.awake = true;
+        this.calmFrames = 0;
+        // Petite secousse vers le haut pour l'effet « on arrache la prise ».
+        const i = end === "a" ? 0 : this.points.length - 1;
+        this.prev[i].y = this.points[i].y + 6;
+    }
+
+    private restSegment() {
+        const distance = Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y);
+        const length = Math.max(distance * ROPE.slack, distance + ROPE.minSlack);
+        return length / (this.points.length - 1);
+    }
+
     step(dt: number) {
         if (!this.awake) return;
-        const { points, prev } = this;
+        const { points, prev, pinA, pinB } = this;
         const n = points.length;
         const g = ROPE.gravity * dt * dt;
         let motion = 0;
+        const free = (i: number) => (i === 0 ? !pinA : i === n - 1 ? !pinB : true);
 
         // Intégration de Verlet sur les points libres.
-        for (let i = 1; i < n - 1; i++) {
+        for (let i = 0; i < n; i++) {
+            if (!free(i)) continue;
             const p = points[i];
             const vx = (p.x - prev[i].x) * ROPE.damping;
             const vy = (p.y - prev[i].y) * ROPE.damping;
@@ -125,15 +153,17 @@ export class Rope {
             p.y += vy + g;
         }
 
-        // Contraintes de distance, extrémités épinglées.
-        const distance = Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y);
-        const length = Math.max(distance * ROPE.slack, distance + ROPE.minSlack);
-        const segment = length / (n - 1);
+        // Contraintes de distance, extrémités épinglées à leurs prises.
+        const segment = this.frozenSegment ?? this.restSegment();
         for (let k = 0; k < ROPE.iterations; k++) {
-            points[0].x = this.a.x;
-            points[0].y = this.a.y;
-            points[n - 1].x = this.b.x;
-            points[n - 1].y = this.b.y;
+            if (pinA) {
+                points[0].x = this.a.x;
+                points[0].y = this.a.y;
+            }
+            if (pinB) {
+                points[n - 1].x = this.b.x;
+                points[n - 1].y = this.b.y;
+            }
             // Sens alterné à chaque passe : sinon les corrections partent toujours
             // de la source et ce côté du câble suit le mouvement plus que l'autre.
             const forward = k % 2 === 0;
@@ -145,8 +175,8 @@ export class Rope {
                 const dy = q.y - p.y;
                 const d = Math.hypot(dx, dy) || 0.0001;
                 const diff = (d - segment) / d;
-                const pFixed = i === 0;
-                const qFixed = i + 1 === n - 1;
+                const pFixed = !free(i);
+                const qFixed = !free(i + 1);
                 if (pFixed && qFixed) continue;
                 const wp = pFixed ? 0 : qFixed ? 1 : 0.5;
                 const wq = qFixed ? 0 : pFixed ? 1 : 0.5;
@@ -156,11 +186,12 @@ export class Rope {
                 q.y -= dy * diff * wq;
             }
         }
-        prev[0] = { ...points[0] };
-        prev[n - 1] = { ...points[n - 1] };
+        if (pinA) prev[0] = { ...points[0] };
+        if (pinB) prev[n - 1] = { ...points[n - 1] };
 
         // Déplacement réel sur ce pas, après contraintes.
-        for (let i = 1; i < n - 1; i++) {
+        for (let i = 0; i < n; i++) {
+            if (!free(i)) continue;
             motion = Math.max(motion, Math.abs(points[i].x - prev[i].x) + Math.abs(points[i].y - prev[i].y));
         }
         this.calmFrames = motion < ROPE.sleepThreshold ? this.calmFrames + 1 : 0;

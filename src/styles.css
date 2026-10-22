@@ -439,6 +439,27 @@ button {
     stroke: var(--cream);
 }
 
+.cable.is-grabbed {
+    opacity: 0.4;
+}
+
+.cable.is-dropping {
+    animation: cable-fade 0.7s ease-in forwards;
+}
+
+.cable.is-dropping .react-flow__edge-interaction {
+    pointer-events: none;
+}
+
+@keyframes cable-fade {
+    60% {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
 .cable.is-dragging .cable-main {
     stroke-dasharray: 2 10;
 }

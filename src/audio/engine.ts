@@ -70,7 +70,9 @@ class AudioEngine {
         return this.modules.get(nodeId)?.instance.position?.() ?? -1;
     }
 
-    private sync(nodes: ModuleNode[], edges: CableEdge[]) {
+    private sync(nodes: ModuleNode[], allEdges: CableEdge[]) {
+        // Un câble qui tombe après débranchement n'est plus connecté.
+        const edges = allEdges.filter((e) => !e.data?.dropping);
         const nodeIds = new Set(nodes.map((n) => n.id));
         const edgeIds = new Set(edges.map((e) => e.id));
 

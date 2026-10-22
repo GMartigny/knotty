@@ -19,14 +19,44 @@ export interface ModuleData extends Record<string, unknown> {
 }
 
 export type ModuleNode = Node<ModuleData, "module">;
-export type CableEdge = Edge<{ kind: PortKind }, "cable">;
+export interface CableData extends Record<string, unknown> {
+    kind: PortKind;
+    /** Câble en train de tomber après un débranchement : l'extrémité indiquée est libre. */
+    dropping?: "source" | "target";
+}
+
+export type CableEdge = Edge<CableData, "cable">;
+
+/** Prise depuis laquelle on tire un câble alors qu'elle est déjà branchée. */
+export interface Grab {
+    nodeId: string;
+    handleId: string;
+    side: "source" | "target";
+}
+
+/** Durée de la chute d'un câble débranché avant qu'il disparaisse, en ms. */
+export const DROP_MS = 700;
+
+const isLive = (e: CableEdge) => !e.data?.dropping;
+
+const attachedTo = (e: CableEdge, grab: Grab) =>
+    grab.side === "source"
+        ? e.source === grab.nodeId && (e.sourceHandle ?? "out") === grab.handleId
+        : e.target === grab.nodeId && (e.targetHandle ?? "in") === grab.handleId;
 
 interface GraphState {
     nodes: ModuleNode[];
     edges: CableEdge[];
+    grab: Grab | null;
     onNodesChange(changes: NodeChange<ModuleNode>[]): void;
     onEdgesChange(changes: EdgeChange<CableEdge>[]): void;
     onConnect(connection: Connection): void;
+    /** Début d'un tirage depuis une prise. */
+    startGrab(grab: Grab): void;
+    /** Fin du tirage : `droppedInVoid` si on a lâché ailleurs que sur une prise. */
+    endGrab(droppedInVoid: boolean): void;
+    /** Débranche les câbles d'une prise : ils tombent puis disparaissent. */
+    unplug(grab: Grab): void;
     isValidConnection(connection: Connection | CableEdge): boolean;
     addModule(type: string, position: XYPosition): void;
     setParam(nodeId: string, paramId: string, value: number): void;
@@ -86,12 +116,38 @@ const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
 export const useGraph = create<GraphState>((set, get) => ({
     nodes: initialNodes,
     edges: initialEdges,
+    grab: null,
 
     onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
     onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
 
+    startGrab(grab) {
+        // On ne retient le tirage que si la prise a déjà au moins un câble.
+        const plugged = get().edges.some((e) => isLive(e) && attachedTo(e, grab));
+        set({ grab: plugged ? grab : null });
+    },
+
+    endGrab(droppedInVoid) {
+        const { grab } = get();
+        set({ grab: null });
+        if (grab && droppedInVoid) get().unplug(grab);
+    },
+
+    unplug(grab) {
+        const ids = new Set(get().edges.filter((e) => isLive(e) && attachedTo(e, grab)).map((e) => e.id));
+        if (!ids.size) return;
+        // Le câble reste affiché le temps de sa chute, mais n'est plus « vivant » pour le moteur audio.
+        set({
+            edges: get().edges.map((e) =>
+                ids.has(e.id) ? { ...e, selectable: false, data: { ...e.data!, dropping: grab.side } } : e,
+            ),
+        });
+        setTimeout(() => set({ edges: get().edges.filter((e) => !ids.has(e.id)) }), DROP_MS);
+    },
+
     isValidConnection(connection) {
-        const { nodes, edges } = get();
+        const { nodes } = get();
+        const edges = get().edges.filter(isLive);
         const { source, target, sourceHandle, targetHandle } = connection;
         if (!source || !target || source === target) return false;
         const src = nodes.find((n) => n.id === source);

@@ -2,14 +2,26 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import type { EdgeProps } from "@xyflow/react";
 import { physics } from "./physics";
 import { useLevel } from "../audio/levels";
-import type { CableEdge as CableEdgeType } from "../store/graph";
+import { useGraph, type CableEdge as CableEdgeType } from "../store/graph";
 
 const KIND_COLOR = {
     audio: "var(--cable-audio)",
     trigger: "var(--cable-trigger)",
 };
 
-export function CableEdge({ id, source, sourceX, sourceY, targetX, targetY, selected, data }: EdgeProps<CableEdgeType>) {
+export function CableEdge({
+    id,
+    source,
+    target,
+    sourceHandleId,
+    targetHandleId,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    selected,
+    data,
+}: EdgeProps<CableEdgeType>) {
     const group = useRef<SVGGElement>(null);
     const main = useRef<SVGPathElement>(null);
     const shadow = useRef<SVGPathElement>(null);
@@ -24,14 +36,30 @@ export function CableEdge({ id, source, sourceX, sourceY, targetX, targetY, sele
 
     useEffect(() => () => physics.remove(id), [id]);
 
+    // Débranché : l'extrémité côté prise tirée se libère et tombe.
+    const dropping = data?.dropping;
+    useEffect(() => {
+        if (dropping) physics.release(id, dropping === "source" ? "a" : "b");
+    }, [id, dropping]);
+
+    // Pendant qu'on tire depuis une prise déjà branchée, ses câbles s'estompent : lâcher dans le vide les débranche.
+    const grabbed = useGraph((s) => {
+        const g = s.grab;
+        if (!g) return false;
+        return g.side === "source"
+            ? g.nodeId === source && g.handleId === (sourceHandleId ?? "out")
+            : g.nodeId === target && g.handleId === (targetHandleId ?? "in");
+    });
+
     // Un câble audio s'illumine selon le niveau du module qui l'alimente,
     // un câble trigger à chaque impulsion qu'il transporte.
     useLevel(data?.kind === "trigger" ? id : source, group);
 
     const color = KIND_COLOR[data?.kind ?? "audio"];
+    const state = dropping ? "is-dropping" : grabbed ? "is-grabbed" : selected ? "is-selected" : "";
 
     return (
-        <g ref={group} className={`cable ${selected ? "is-selected" : ""}`} style={{ "--cable-color": color } as React.CSSProperties}>
+        <g ref={group} className={`cable ${state}`} style={{ "--cable-color": color } as React.CSSProperties}>
             <path ref={shadow} className="cable-shadow" fill="none" />
             <path ref={main} className="cable-main" fill="none" />
             <path ref={hit} className="react-flow__edge-interaction" fill="none" strokeOpacity={0} strokeWidth={20} />

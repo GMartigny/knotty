@@ -51,6 +51,11 @@ export const physics = {
         wake();
         return rope.toPath();
     },
+    /** Débranche une extrémité du câble : elle tombe librement. */
+    release(id: string, end: "a" | "b") {
+        entries.get(id)?.rope.release(end);
+        wake();
+    },
     remove(id: string) {
         entries.delete(id);
     },

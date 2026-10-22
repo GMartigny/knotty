@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Pastille du bloc Sortie : disque violet cerclé d'encre, point central -->
+  <circle cx="16" cy="16" r="14" fill="#a78bfa" stroke="#1a1b3a" stroke-width="3"/>
+  <circle cx="16" cy="16" r="7.5" fill="#fff6e5" stroke="#1a1b3a" stroke-width="2.5"/>
+  <circle cx="16" cy="16" r="3.5" fill="#1a1b3a"/>
+</svg>

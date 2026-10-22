@@ -1213,8 +1213,10 @@ button {
  * The frame lets clicks through to the mat (panning, selection) and to the blocks inside it:
  * only its header and resize handles catch the pointer.
  */
-.react-flow__node:has(> .comment) {
-    pointer-events: none;
+/* `!important`: React Flow sets `pointer-events: all` inline on every node. */
+.react-flow__node:has(> .comment),
+.comment {
+    pointer-events: none !important;
 }
 
 .comment-head,

@@ -17,10 +17,10 @@ export const noise: ModuleDef = {
     params: [
         { id: "color", label: "Couleur", min: 0, max: 2, default: 1, options: ["Blanc", "Rose", "Brun"] },
         { id: "decay", label: "Durée d'un coup", min: 0.02, max: 1.5, default: 0.12, step: 0.01, scale: "log", unit: "s", activeWith: "gate" },
-        { id: "volume", label: "Volume", min: -40, max: 0, default: -12, step: 0.5, unit: "dB" },
     ],
     create(params) {
-        const source = new Tone.Noise({ type: COLORS[params.color] ?? "pink", volume: params.volume });
+        // Niveau fixe : le volume se règle avec un bloc Volume.
+        const source = new Tone.Noise({ type: COLORS[params.color] ?? "pink", volume: -12 });
         const out = new Tone.Gain(1);
         // Chemin continu, coupé quand le bruit est piloté par des déclenchements.
         const open = new Tone.Gain(1).connect(out);
@@ -32,7 +32,6 @@ export const noise: ModuleDef = {
             output: () => out,
             setParam(id, value) {
                 if (id === "color") source.type = COLORS[value] ?? "pink";
-                if (id === "volume") source.volume.rampTo(value, 0.05);
                 if (id === "decay") env.decay = value;
             },
             start: () => {

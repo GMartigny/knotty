@@ -168,6 +168,12 @@ button {
     border-radius: 17px 17px 0 0;
 }
 
+/* Bloc réduit à son en-tête. */
+.block.is-compact .block-head {
+    border-bottom: 0;
+    border-radius: 17px;
+}
+
 .block-icon {
     display: grid;
     place-items: center;

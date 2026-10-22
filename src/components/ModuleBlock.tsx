@@ -41,11 +41,13 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
     );
 
     if (!def) return null;
+    // Un bloc sans réglage (ex. Sortie) se réduit à son en-tête.
+    const compact = !def.params.some((p) => !p.hidden) && def.type !== "sequencer";
 
     return (
         <div
             ref={ref}
-            className={`block block-${def.type} ${selected ? "is-selected" : ""}`}
+            className={`block block-${def.type} ${compact ? "is-compact" : ""} ${selected ? "is-selected" : ""}`}
             style={{ "--accent": categoryColor[def.category] } as React.CSSProperties}
         >
             <header className="block-head">
@@ -58,6 +60,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                 </button>
             </header>
 
+            {!compact && (
             <div className="block-body">
                 {def.type === "envelope" && <EnvelopeShape params={data.params} />}
                 {def.params
@@ -75,6 +78,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                     <SequencerGrid nodeId={id} params={data.params} onChange={(param, v) => setParam(id, param, v)} />
                 )}
             </div>
+            )}
 
             <Sockets ports={def.inputs} side="in" />
             <Sockets ports={def.outputs} side="out" />

@@ -31,6 +31,6 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 3. ~~Oscillateur (sinus, carré, triangle, scie) avec mini-oscilloscope~~, débrancher un câble en tirant depuis sa prise
 4. ~~Enveloppe ADSR, Volume, Mixeur 4 voies, prises de modulation sur les curseurs~~
 5. Impulsions lumineuses le long des câbles
-6. ~~Sauvegarde locale, modèles « Groove » et « Doux »~~, partage par URL
+6. ~~Sauvegarde locale, modèles « Doux », « Groove » et « Métal »~~, partage par URL
 7. ~~Clavier (ordinateur et mini-piano)~~
 8. ~~Écho calé sur le tempo, Distorsion, Gamme (signal → notes justes), courbe de réponse du Filtre~~

@@ -156,6 +156,145 @@ function softPatch(): Patch {
     return { nodes, edges };
 }
 
+/**
+ * Patch « Métal » : un groupe complet à 150 bpm, sur deux séquenceurs.
+ *
+ * Batterie (séquenceur « batterie ») — piste 1 : double pédale au galop (sinus grave très sec) ;
+ * piste 2 : caisse claire sur 2 et 4 (bruit, passe-bande) ; piste 3 : charley en croches (bruit,
+ * passe-haut) ; piste 4 : crash en début de mesure (bruit, longue résonance). Mixeur « batterie ».
+ *
+ * Groupe (séquenceur « groupe ») — piste 1 : guitare rythmique, power chord Mi + Si en dents de scie,
+ * « chug » étouffé calé sur la double pédale, très distordu puis filtré comme un baffle ;
+ * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : guitare solo — une Gamme mineure
+ * en Mi, balayée par une dent de scie lente, donne des montées de notes justes ; vibrato par un sinus
+ * à 5,5 Hz atténué ; distorsion, écho, filtre.
+ *
+ * Mixeur général → réverb discrète → sortie.
+ */
+function metalPatch(): Patch {
+    // Colonnes : déclenchement, sources, enveloppes, traitements, mixage.
+    const cSeq = 0;
+    const cSrc = 460;
+    const cEnv = 760;
+    const cFx1 = 1060;
+    const cFx2 = 1360;
+    const cFx3 = 1660;
+    const cMix = 1980;
+    const cBus = 2300;
+    const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
+    const dry = { attack: 0.001, sustain: 0, hold: 0.005 };
+
+    const nodes: ModuleNode[] = [
+        // ——— Batterie ———
+        node("drums", "sequencer", cSeq, 700, {
+            bpm: 150,
+            row0: gallop,
+            row1: steps(5, 13),
+            row2: steps(1, 3, 5, 7, 9, 11, 13, 15),
+            row3: steps(1),
+        }),
+        node("kick-osc", "sine", cSrc, 60, { shape: 0, frequency: 50 }),
+        node("kick-env", "envelope", cEnv, 0, { ...dry, decay: 0.11, release: 0.04 }),
+        node("noise", "noise", cSrc, 760, { color: 0 }),
+        node("snare-env", "envelope", cEnv, 470, { ...dry, decay: 0.14, release: 0.05 }),
+        node("snare-filter", "filter", cFx1, 530, { mode: 2, frequency: 2000, Q: 0.9 }),
+        node("hat-env", "envelope", cEnv, 940, { ...dry, decay: 0.035, release: 0.02 }),
+        node("hat-filter", "filter", cFx1, 1000, { mode: 1, frequency: 9000, Q: 0.7 }),
+        node("crash-env", "envelope", cEnv, 1410, { ...dry, decay: 1.4, release: 0.5 }),
+        node("crash-filter", "filter", cFx1, 1470, { mode: 1, frequency: 5500, Q: 0.7 }),
+        node("drum-mix", "mixer", cMix, 700, { level1: 100, level2: 80, level3: 30, level4: 35 }),
+
+        // ——— Guitare rythmique ———
+        node("band", "sequencer", cSeq, 2420, {
+            bpm: 150,
+            row0: gallop,
+            row1: steps(1, 3, 5, 7, 9, 11, 13, 15),
+            row2: steps(1, 3, 5, 6, 7, 8, 11, 13, 14, 15, 16),
+            row3: 0,
+        }),
+        node("gtr-root", "sine", cSrc, 1900, { shape: 3, frequency: 82.4 }),
+        node("gtr-fifth", "sine", cSrc, 2160, { shape: 3, frequency: 123.5 }),
+        node("gtr-env", "envelope", cEnv, 1900, { attack: 0.003, decay: 0.1, sustain: 0.15, hold: 0.03, release: 0.06 }),
+        node("gtr-dist", "distortion", cFx1, 1960, { drive: 45, wet: 1 }),
+        node("gtr-cab", "filter", cFx2, 1960, { mode: 0, frequency: 2800, Q: 1.5 }),
+
+        // ——— Basse ———
+        node("bass-osc", "sine", cSrc, 2420, { shape: 1, frequency: 41.2 }),
+        node("bass-env", "envelope", cEnv, 2380, { attack: 0.004, decay: 0.12, sustain: 0.3, hold: 0.04, release: 0.08 }),
+        node("bass-filter", "filter", cFx1, 2440, { mode: 0, frequency: 500, Q: 2 }),
+
+        // ——— Guitare solo ———
+        node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 3, frequency: 0.55 }),
+        node("lead-scale", "scale", cSeq, 2920, { scale: 1, root: 2, octave: 1 }),
+        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330 }),
+        node("vibrato", "sine", cSeq - 340, 3280, { shape: 0, frequency: 5.5 }),
+        // Ampleur du vibrato : −32 dB ≈ ±2,5 % (moins d'un quart de ton).
+        node("vibrato-depth", "volume", cSeq, 3300, { volume: -32 }),
+        node("lead-env", "envelope", cEnv, 2880, { attack: 0.01, decay: 0.2, sustain: 0.6, hold: 0.12, release: 0.25 }),
+        node("lead-dist", "distortion", cFx1, 2940, { drive: 20, wet: 1 }),
+        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.35, wet: 0.3 }),
+        node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 4500, Q: 1 }),
+
+        // ——— Mixage ———
+        node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 55 }),
+        node("reverb", "reverb", cBus + 300, 1720, { decay: 1.8, wet: 0.15 }),
+        node("out", "output", cBus + 600, 1780),
+    ];
+
+    const edges: CableEdge[] = [
+        // Batterie
+        cable("drums", "row0", "kick-env", "gate", "trigger"),
+        cable("drums", "row1", "snare-env", "gate", "trigger"),
+        cable("drums", "row2", "hat-env", "gate", "trigger"),
+        cable("drums", "row3", "crash-env", "gate", "trigger"),
+        cable("kick-osc", "out", "kick-env", "in"),
+        cable("noise", "out", "snare-env", "in"),
+        cable("noise", "out", "hat-env", "in"),
+        cable("noise", "out", "crash-env", "in"),
+        cable("snare-env", "out", "snare-filter", "in"),
+        cable("hat-env", "out", "hat-filter", "in"),
+        cable("crash-env", "out", "crash-filter", "in"),
+        cable("kick-env", "out", "drum-mix", "in1"),
+        cable("snare-filter", "out", "drum-mix", "in2"),
+        cable("hat-filter", "out", "drum-mix", "in3"),
+        cable("crash-filter", "out", "drum-mix", "in4"),
+
+        // Guitare rythmique
+        cable("band", "row0", "gtr-env", "gate", "trigger"),
+        cable("gtr-root", "out", "gtr-env", "in"),
+        cable("gtr-fifth", "out", "gtr-env", "in"),
+        cable("gtr-env", "out", "gtr-dist", "in"),
+        cable("gtr-dist", "out", "gtr-cab", "in"),
+
+        // Basse
+        cable("band", "row1", "bass-env", "gate", "trigger"),
+        cable("bass-osc", "out", "bass-env", "in"),
+        cable("bass-env", "out", "bass-filter", "in"),
+
+        // Guitare solo
+        cable("lead-sweep", "out", "lead-scale", "in"),
+        cable("band", "row2", "lead-scale", "gate", "trigger"),
+        cable("lead-scale", "out", "lead-osc", "note", "trigger"),
+        cable("lead-scale", "out", "lead-env", "gate", "trigger"),
+        cable("vibrato", "out", "vibrato-depth", "in"),
+        cable("vibrato-depth", "out", "lead-osc", "mod:frequency"),
+        cable("lead-osc", "out", "lead-env", "in"),
+        cable("lead-env", "out", "lead-dist", "in"),
+        cable("lead-dist", "out", "lead-echo", "in"),
+        cable("lead-echo", "out", "lead-filter", "in"),
+
+        // Mixage
+        cable("drum-mix", "out", "bus", "in1"),
+        cable("gtr-cab", "out", "bus", "in2"),
+        cable("bass-filter", "out", "bus", "in3"),
+        cable("lead-filter", "out", "bus", "in4"),
+        cable("bus", "out", "reverb", "in"),
+        cable("reverb", "out", "out", "in"),
+    ];
+
+    return { nodes, edges };
+}
+
 export interface Example {
     id: string;
     label: string;
@@ -167,6 +306,7 @@ export interface Example {
 export const EXAMPLES: Example[] = [
     { id: "soft", label: "Doux", description: "Un séquenceur, un oscillateur, une note calme : idéal pour démarrer", build: softPatch },
     { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
+    { id: "metal", label: "Métal", description: "Un groupe complet : batterie, guitares distordues, basse et solo", build: metalPatch },
 ];
 
 /** Modèle chargé à la toute première visite. */

@@ -336,6 +336,14 @@ button {
     border-radius: 10px;
 }
 
+.mini-scope {
+    display: block;
+    max-width: 100%;
+    background: var(--cream-shade);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+}
+
 .env-fill {
     fill: var(--accent);
     opacity: 0.45;

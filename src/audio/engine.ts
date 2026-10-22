@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { registry } from "../modules/registry";
-import { modParamOf, type ModuleInstance, type ParamValues } from "../modules/types";
+import { modParamOf, SOURCE_LEVEL, type ModuleInstance, type ParamValues } from "../modules/types";
 import { useGraph, type CableEdge, type ModuleNode } from "../store/graph";
 
 interface LiveModule {
@@ -77,6 +77,16 @@ class AudioEngine {
         return Math.max(0, 1 - (performance.now() - pulse) / PULSE_MS);
     }
 
+    /** Échantillons récents du signal d'un module, ou `undefined` tant que le son n'est pas lancé. */
+    scope(nodeId: string): Float32Array | undefined {
+        if (!this.running) return undefined;
+        return this.modules.get(nodeId)?.instance.scope?.();
+    }
+
+    get sampleRate() {
+        return Tone.getContext().sampleRate;
+    }
+
     /** État affichable d'un module (ex. pas courant du séquenceur), -1 si aucun. */
     position(nodeId: string): number {
         if (!this.running) return -1;
@@ -118,7 +128,7 @@ class AudioEngine {
                 // La profondeur de modulation suit le curseur (ex. ±100 % de la fréquence choisie).
                 for (const c of this.cables.values()) {
                     if (c.kind === "mod" && c.target === node.id && c.paramId === key && c.scaler && c.depth) {
-                        c.scaler.factor.rampTo(c.depth(value), 0.05);
+                        c.scaler.factor.rampTo(c.depth(value) / SOURCE_LEVEL, 0.05);
                     }
                 }
             }
@@ -171,7 +181,8 @@ class AudioEngine {
         const base = this.modules.get(edge.target)?.params[paramId] ?? 0;
         const target = dst.modTarget?.(paramId);
         if (target) {
-            const scaler = new Tone.Multiply(target.depth(base));
+            // Le signal est ramené à ±1 : une source à son niveau normal parcourt toute la profondeur.
+            const scaler = new Tone.Multiply(target.depth(base) / SOURCE_LEVEL);
             from.connect(scaler);
             scaler.connect(target.param);
             this.cables.set(edge.id, { kind: "mod", from, target: edge.target, paramId, scaler, depth: target.depth });
@@ -198,7 +209,7 @@ class AudioEngine {
         }
         instance?.setModSource?.(paramId, () => {
             let sum = 0;
-            for (const m of meters) sum += m.getValue() as number;
+            for (const m of meters) sum += (m.getValue() as number) / SOURCE_LEVEL;
             return Math.max(-1, Math.min(1, sum));
         });
     }

@@ -38,6 +38,10 @@ export type ModuleCategory = "source" | "effect" | "sequencer" | "output";
 
 export type ParamValues = Record<string, number>;
 
+/** Niveau de sortie des sources (−12 dB). Une modulation venue d'une source à ce niveau parcourt toute la plage. */
+export const SOURCE_DB = -12;
+export const SOURCE_LEVEL = Math.pow(10, SOURCE_DB / 20);
+
 /** Préfixe des prises de modulation : `mod:frequency` module le réglage `frequency`. */
 export const MOD_PREFIX = "mod:";
 export const modPort = (paramId: string) => `${MOD_PREFIX}${paramId}`;
@@ -102,6 +106,8 @@ export interface ModuleInstance {
     setTriggerConnected?(portId: string, connected: boolean): void;
     /** État affichable (ex. pas courant du séquenceur), lu par l'UI. */
     position?(): number;
+    /** Derniers échantillons du signal, pour l'affichage de l'onde. */
+    scope?(): Float32Array;
     /** Modulation en temps réel d'un réglage, si ce réglage est un paramètre audio. */
     modTarget?(paramId: string): ModTarget | undefined;
     /** Sinon, modulation lue ponctuellement : le moteur fournit une fonction qui renvoie le signal (-1…1). */

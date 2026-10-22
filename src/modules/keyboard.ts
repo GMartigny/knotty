@@ -2,14 +2,14 @@ import * as Tone from "tone";
 import type { ModuleDef, TriggerListener } from "./types";
 
 /**
- * Touches du clavier d'ordinateur, par position physique (`event.code`) : la rangée du milieu
- * donne les touches blanches, celle du dessus les noires, comme sur un piano.
- * Sur un clavier AZERTY : Q S D F G H J K (blanches) et Z E T Y U (noires).
+ * Computer keyboard keys, by physical position (`event.code`): the middle row
+ * gives the white keys, the row above the black ones, like on a piano.
+ * On a QWERTY keyboard: A S D F G H J K (white) and W E T Y U (black).
  */
 export const KEY_CODES = ["KeyA", "KeyW", "KeyS", "KeyE", "KeyD", "KeyF", "KeyT", "KeyG", "KeyY", "KeyH", "KeyU", "KeyJ", "KeyK"];
-/** Demi-tons noirs (dièses) dans l'octave. */
+/** Black semitones (sharps) in the octave. */
 export const BLACK = new Set([1, 3, 6, 8, 10]);
-export const NOTE_NAMES = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si", "Do"];
+export const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B", "C"];
 
 const OCTAVES = [2, 3, 4, 5];
 const C4 = 261.63;
@@ -17,7 +17,7 @@ const C4 = 261.63;
 export const noteFrequency = (octaveIndex: number, semitone: number) =>
     C4 * Math.pow(2, (OCTAVES[octaveIndex] ?? 4) - 4) * Math.pow(2, semitone / 12);
 
-/** Ne pas jouer quand on tape du texte, ni avec un raccourci. */
+/** Don't play while typing text, nor with a shortcut. */
 const ignored = (e: KeyboardEvent) => {
     const t = e.target as HTMLElement | null;
     return (
@@ -30,10 +30,10 @@ const ignored = (e: KeyboardEvent) => {
     );
 };
 
-/** Joue des notes depuis le clavier de l'ordinateur ou le mini-piano du bloc. */
+/** Plays notes from the computer keyboard or the block's mini-piano. */
 export const keyboard: ModuleDef = {
     type: "keyboard",
-    label: "Clavier",
+    label: "Keyboard",
     icon: "♪",
     category: "sequencer",
     inputs: [],
@@ -42,7 +42,7 @@ export const keyboard: ModuleDef = {
     create(values) {
         let octave = values.octave ?? 2;
         const listeners = new Set<TriggerListener>();
-        /** Touches enfoncées, en masque de bits (pour l'affichage). */
+        /** Pressed keys, as a bitmask (for display). */
         let held = 0;
 
         const play = (semitone: number) => {

@@ -6,20 +6,20 @@ const W = 188;
 const H = 54;
 const PAD = 5;
 const CYCLES = 3;
-/** Cycles minimum à caler dans la mémoire ; en dessous, la courbe défile. */
+/** Minimum cycles to fit in memory; below that, the curve scrolls. */
 const MIN_CYCLES = 1.5;
-/** Mode défilant : un point toutes les ~4 ms d'audio. */
+/** Scrolling mode: one point every ~4 ms of audio. */
 const TRAIL_STEP_S = 0.004;
 
 interface Props {
     nodeId: string;
-    /** Fréquence réglée, pour cadrer l'affichage sur quelques cycles. */
+    /** Set frequency, to frame the display on a few cycles. */
     frequency: number;
-    /** Forme réglée (index dans SHAPES), pour l'aperçu avant le lancement du son. */
+    /** Set shape (index in SHAPES), for the preview before sound starts. */
     shape: number;
 }
 
-/** Forme idéale à la phase t (0…1), entre -1 et 1. */
+/** Ideal shape at phase t (0…1), between -1 and 1. */
 const ideal = (shape: number, t: number) => {
     const p = t - Math.floor(t);
     switch (shape) {
@@ -35,8 +35,8 @@ const ideal = (shape: number, t: number) => {
 };
 
 /**
- * Mini-oscilloscope : l'onde en direct, calée sur le début d'un cycle pour rester immobile.
- * Pour un signal trop lent pour tenir en mémoire (< ~7 Hz), un tracé qui défile. Avant le lancement du son, la forme idéale.
+ * Mini-oscilloscope: the live wave, locked to the start of a cycle so it stays still.
+ * For a signal too slow to fit in memory (< ~7 Hz), a scrolling trace. Before sound starts, the ideal shape.
  */
 export function MiniScope({ nodeId, frequency, shape }: Props) {
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -54,7 +54,7 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
         el.height = H * dpr;
         ctx.scale(dpr, dpr);
         const ink = getComputedStyle(el).getPropertyValue("--ink").trim() || "#1a1b3a";
-        /** Mode défilant : valeurs horodatées sur l'horloge audio (s). */
+        /** Scrolling mode: values timestamped on the audio clock (s). */
         const trail: { t: number; v: number }[] = [];
         let frame = 0;
 
@@ -84,25 +84,25 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
         const tick = () => {
             frame = requestAnimationFrame(tick);
             const samples = engine.scope(nodeId);
-            // L'oscillateur sort à -12 dB : on le ramène à pleine hauteur.
+            // The oscillator outputs at -12 dB: scale it back to full height.
             const gain = 1 / SOURCE_LEVEL;
 
             if (!samples) {
-                // Son pas encore lancé : forme idéale sur quelques cycles.
+                // Sound not started yet: ideal shape over a few cycles.
                 draw(Array.from({ length: 241 }, (_, i) => ideal(form.current, (i / 240) * CYCLES)));
                 return;
             }
 
             const len = samples.length;
-            // Fréquence réellement jouée (une note peut avoir remplacé celle du curseur).
+            // Frequency actually playing (a note may have replaced the slider's).
             const hz = engine.pitch(nodeId) ?? freq.current;
             el.dataset.hz = hz.toFixed(1);
             const perCycle = engine.sampleRate / hz;
 
             if (perCycle * (MIN_CYCLES + 1) > len) {
-                // Signal lent : la mémoire ne contient pas assez de cycles, la courbe défile.
-                // Le dernier échantillon correspond à l'horloge audio ; on ajoute un point toutes les
-                // ~4 ms d'audio écoulées depuis le dernier point, sans dépendre du rythme des images.
+                // Slow signal: memory doesn't hold enough cycles, so the curve scrolls.
+                // The last sample matches the audio clock; add a point for every
+                // ~4 ms of audio elapsed since the last point, independently of the frame rate.
                 const sr = engine.sampleRate;
                 const now = engine.audioTime;
                 const lastT = trail.length ? trail[trail.length - 1].t : now - (len - 1) / sr;
@@ -118,7 +118,7 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
             }
             trail.length = 0;
 
-            // Calage : dernier passage par zéro en montant qui laisse la place d'afficher ~3 cycles.
+            // Locking: last rising zero crossing that leaves room to show ~3 cycles.
             const span = Math.min(Math.round(perCycle * CYCLES), len - 1 - Math.ceil(perCycle));
             let start = 0;
             for (let i = len - span - 1; i > 0; i--) {
@@ -136,5 +136,5 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
         return () => cancelAnimationFrame(frame);
     }, [nodeId]);
 
-    return <canvas ref={canvas} className="mini-scope" style={{ width: W, height: H }} role="img" aria-label="Forme de l'onde" />;
+    return <canvas ref={canvas} className="mini-scope" style={{ width: W, height: H }} role="img" aria-label="Waveform" />;
 }

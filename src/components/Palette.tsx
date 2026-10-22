@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { categoryColor, moduleList, registry } from "../modules/registry";
 
-/** Distance (px) au-delà de laquelle un appui devient un glisser plutôt qu'un clic. */
+/** Distance (px) beyond which a press becomes a drag rather than a click. */
 const DRAG_THRESHOLD = 5;
 
 interface Props {
-    /** Clic sur un bloc : l'ajouter au centre du tapis. */
+    /** Click on a block: add it at the center of the mat. */
     onAdd(type: string): void;
-    /** Bloc lâché à ces coordonnées écran ; renvoie `false` si ce n'est pas au-dessus du tapis. */
+    /** Block dropped at these screen coordinates; returns `false` if not over the mat. */
     onDrop(type: string, clientX: number, clientY: number): boolean;
 }
 
@@ -19,8 +19,8 @@ interface Drag {
 }
 
 /**
- * Palette des blocs. Le glisser est fait à la main, avec les événements du pointeur :
- * le glisser-déposer natif du navigateur annule parfois un dépôt quand le geste est rapide.
+ * Block palette. Dragging is done by hand with pointer events:
+ * the browser's native drag and drop sometimes cancels a drop when the gesture is fast.
  */
 export function Palette({ onAdd, onDrop }: Props) {
     const [drag, setDrag] = useState<Drag | null>(null);
@@ -54,16 +54,16 @@ export function Palette({ onAdd, onDrop }: Props) {
             window.removeEventListener("pointerup", up);
             window.removeEventListener("pointercancel", cancel);
         };
-        // On ne se réabonne qu'au début et à la fin d'un glisser.
+        // Only resubscribe at the start and end of a drag.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [drag === null]);
 
     const ghost = drag?.moved ? registry[drag.type] : undefined;
 
     return (
-        <aside className="palette" aria-label="Blocs">
+        <aside className="palette" aria-label="Blocks">
             <h1 className="logo">knotty</h1>
-            <p className="palette-hint">Glisse un bloc sur le tapis, puis tire un câble d'une prise à l'autre.</p>
+            <p className="palette-hint">Drag a block onto the mat, then pull a cable from one socket to another.</p>
             <ul>
                 {moduleList.map((m) => (
                     <li key={m.type}>
@@ -78,7 +78,7 @@ export function Palette({ onAdd, onDrop }: Props) {
                                 setDrag({ type: m.type, x: e.clientX, y: e.clientY, moved: false });
                             }}
                             onKeyDown={(e) => {
-                                // Au clavier : Entrée ou Espace ajoute le bloc au centre.
+                                // With the keyboard: Enter or Space adds the block at the center.
                                 if (e.key === "Enter" || e.key === " ") {
                                     e.preventDefault();
                                     onAdd(m.type);
@@ -94,32 +94,32 @@ export function Palette({ onAdd, onDrop }: Props) {
                 ))}
             </ul>
 
-            {/* Légende des prises : la couleur du cœur dit quel signal passe. */}
+            {/* Socket legend: the core color tells which signal flows. */}
             <dl className="legend">
                 <div>
                     <dt>
                         <span className="legend-socket socket-audio" aria-hidden />
-                        Son
+                        Sound
                     </dt>
-                    <dd>se branche sur une entrée son ou un réglage</dd>
+                    <dd>plugs into a sound input or a setting</dd>
                 </div>
                 <div>
                     <dt>
                         <span className="legend-socket socket-trigger" aria-hidden />
-                        Déclencheur
+                        Trigger
                     </dt>
-                    <dd>du séquenceur vers les entrées Déclencheur</dd>
+                    <dd>from the sequencer to Trigger inputs</dd>
                 </div>
                 <div>
                     <dt>
                         <span className="legend-socket socket-mod" aria-hidden />
-                        Réglage
+                        Setting
                     </dt>
-                    <dd>reçoit un son pour faire bouger le curseur</dd>
+                    <dd>takes a sound to move the slider</dd>
                 </div>
             </dl>
 
-            {/* Le bloc suit le pointeur pendant le glisser. */}
+            {/* The block follows the pointer while dragging. */}
             {ghost && drag && (
                 <div
                     className="drag-ghost"

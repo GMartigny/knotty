@@ -19,38 +19,38 @@ import { defaultParams, type ParamValues, type PortKind } from "../modules/types
 export interface ModuleData extends Record<string, unknown> {
     type: string;
     params: ParamValues;
-    /** Texte d'un Commentaire. */
+    /** Text of a Comment. */
     text?: string;
-    /** Bloc en train de tomber après suppression. */
+    /** Block falling after being removed. */
     removing?: boolean;
 }
 
 export type ModuleNode = Node<ModuleData, "module">;
 export interface CableData extends Record<string, unknown> {
     kind: PortKind;
-    /** Câble en train de tomber après un débranchement : l'extrémité indiquée est libre. */
+    /** Cable falling after being unplugged: the given end is loose. */
     dropping?: "source" | "target";
 }
 
 export type CableEdge = Edge<CableData, "cable">;
 
-/** Prise depuis laquelle on tire un câble. */
+/** Socket a cable is being pulled from. */
 export interface Grab {
     nodeId: string;
     handleId: string;
     side: "source" | "target";
-    /** Type de la prise tirée, pour allumer les prises compatibles. */
+    /** Kind of the pulled socket, to light up compatible sockets. */
     kind?: PortKind;
-    /** La prise avait déjà au moins un câble : lâcher dans le vide le débranche. */
+    /** The socket already had at least one cable: dropping in empty space unplugs it. */
     plugged?: boolean;
 }
 
-/** Durée de la chute d'un câble débranché avant qu'il disparaisse, en ms. */
+/** How long an unplugged cable falls before it disappears, in ms. */
 export const DROP_MS = 700;
 
 /**
- * Durée de la cascade quand on efface tout, en ms, quel que soit le nombre de blocs :
- * l'écart entre deux chutes est cette durée divisée par le nombre de blocs (10 blocs → 100 ms).
+ * Duration of the cascade when clearing everything, in ms, whatever the number of blocks:
+ * the gap between two falls is this duration divided by the number of blocks (10 blocks → 100 ms).
  */
 const CLEAR_TOTAL_MS = 1000;
 
@@ -68,20 +68,20 @@ interface GraphState {
     onNodesChange(changes: NodeChange<ModuleNode>[]): void;
     onEdgesChange(changes: EdgeChange<CableEdge>[]): void;
     onConnect(connection: Connection): void;
-    /** Début d'un tirage depuis une prise. */
+    /** Start of a pull from a socket. */
     startGrab(grab: Grab): void;
-    /** Fin du tirage : `droppedInVoid` si on a lâché ailleurs que sur une prise. */
+    /** End of the pull: `droppedInVoid` if released anywhere but on a socket. */
     endGrab(droppedInVoid: boolean): void;
-    /** Débranche les câbles d'une prise : ils tombent puis disparaissent. */
+    /** Unplugs a socket's cables: they fall, then disappear. */
     unplug(grab: Grab): void;
     isValidConnection(connection: Connection | CableEdge): boolean;
     addModule(type: string, position: XYPosition): void;
     setParam(nodeId: string, paramId: string, value: number): void;
     setText(nodeId: string, text: string): void;
     removeNode(nodeId: string): void;
-    /** Supprime tous les blocs, en cascade. */
+    /** Removes all blocks, in a cascade. */
     clearAll(): void;
-    /** Remplace le tapis par un modèle (voir EXAMPLES). */
+    /** Replaces the mat with a preset (see EXAMPLES). */
     loadExample(id?: string): void;
 }
 
@@ -96,19 +96,19 @@ const makeNode = (type: string, position: XYPosition, id = newId(type), params: 
     ...(type === "comment" && commentFrame(COMMENT_SIZE.width, COMMENT_SIZE.height)),
 });
 
-/** Taille supposée d'un nouveau bloc tant qu'il n'est pas mesuré. */
+/** Assumed size of a new block until it is measured. */
 const NEW_BLOCK = { width: 240, height: 230 };
-// Assez large pour que les prises de deux blocs voisins ne se touchent pas.
+// Wide enough that the sockets of two neighboring blocks don't touch.
 const MARGIN = 56;
 
 /**
- * Première place libre autour de `wanted`, en tournant en spirale,
- * pour qu'un nouveau bloc ne recouvre pas les prises d'un autre.
+ * First free spot around `wanted`, spiraling outward,
+ * so a new block doesn't cover another one's sockets.
  */
 const freeSpot = (nodes: ModuleNode[], wanted: XYPosition): XYPosition => {
     const overlaps = (p: XYPosition) =>
         nodes.some((n) => {
-            // On peut poser un bloc dans un cadre de Commentaire.
+            // A block can be dropped inside a Comment frame.
             if (n.data.type === "comment") return false;
             const w = n.measured?.width ?? NEW_BLOCK.width;
             const h = n.measured?.height ?? NEW_BLOCK.height;
@@ -132,7 +132,7 @@ const freeSpot = (nodes: ModuleNode[], wanted: XYPosition): XYPosition => {
     return wanted;
 };
 
-/** Vrai si `to` est atteignable depuis `from` (pour refuser les boucles). */
+/** True if `to` can be reached from `from` (to refuse loops). */
 const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
     const stack = [from];
     const seen = new Set<string>();
@@ -146,7 +146,7 @@ const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
     return false;
 };
 
-/** Patch restauré depuis le navigateur, sinon le patch d'exemple. */
+/** Patch restored from the browser, otherwise the example patch. */
 const restored = loadPatch() ?? examplePatch();
 
 export const useGraph = create<GraphState>((set, get) => ({
@@ -173,7 +173,7 @@ export const useGraph = create<GraphState>((set, get) => ({
     unplug(grab) {
         const ids = new Set(get().edges.filter((e) => isLive(e) && attachedTo(e, grab)).map((e) => e.id));
         if (!ids.size) return;
-        // Le câble reste affiché le temps de sa chute, mais n'est plus « vivant » pour le moteur audio.
+        // The cable stays visible while it falls, but is no longer "live" for the audio engine.
         set({
             edges: get().edges.map((e) =>
                 ids.has(e.id) ? { ...e, selectable: false, data: { ...e.data!, dropping: grab.side } } : e,
@@ -214,7 +214,7 @@ export const useGraph = create<GraphState>((set, get) => ({
 
     addModule: (type, position) => {
         const nodes = get().nodes;
-        // Un Commentaire se pose où on le lâche, même par-dessus des blocs (il passe derrière).
+        // A Comment lands where it is dropped, even over blocks (it goes behind them).
         const at = type === "comment" ? position : freeSpot(nodes, position);
         set({ nodes: [...nodes, makeNode(type, at)] });
     },
@@ -230,12 +230,12 @@ export const useGraph = create<GraphState>((set, get) => ({
         set({ nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)) }),
 
     loadExample(id) {
-        // Le moteur audio fait la différence : les anciens blocs sont détruits, les nouveaux créés.
+        // The audio engine computes the diff: old blocks are disposed, new ones created.
         set(examplePatch(id));
     },
 
     clearAll() {
-        // Les blocs tombent l'un après l'autre, de gauche à droite.
+        // Blocks fall one after the other, from left to right.
         const ids = get()
             .nodes.filter((n) => !n.data.removing)
             .sort((a, b) => a.position.x - b.position.x)
@@ -247,8 +247,8 @@ export const useGraph = create<GraphState>((set, get) => ({
     removeNode(nodeId) {
         const node = get().nodes.find((n) => n.id === nodeId);
         if (!node || node.data.removing) return;
-        // Le bloc tombe et s'efface ; ses câbles se décrochent de son côté et tombent aussi.
-        // Pour le moteur audio, il est déjà retiré.
+        // The block falls and fades out; its cables come loose on its side and fall too.
+        // For the audio engine, it is already removed.
         set({
             nodes: get().nodes.map((n) =>
                 n.id === nodeId
@@ -272,7 +272,7 @@ export const useGraph = create<GraphState>((set, get) => ({
     },
 }));
 
-// Chaque modification du patch est enregistrée dans le navigateur.
+// Every change to the patch is saved in the browser.
 useGraph.subscribe((state, prev) => {
     if (state.nodes !== prev.nodes || state.edges !== prev.edges) savePatch(state.nodes, state.edges);
 });

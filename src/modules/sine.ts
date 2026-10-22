@@ -5,30 +5,30 @@ import { driven, paramDef } from "./mod";
 export const SHAPES = ["sine", "square", "triangle", "sawtooth"] as const;
 
 const params: ParamDef[] = [
-    { id: "shape", label: "Forme", min: 0, max: 3, default: 0, options: ["Sinus", "Carré", "Triangle", "Scie"] },
-    // Descend jusqu'à 0,1 Hz pour servir d'oscillateur lent (modulation).
-    { id: "frequency", label: "Fréquence", min: 0.1, max: 2000, default: 220, scale: "log", unit: "Hz" },
-    // Temps pour glisser d'une note reçue à la suivante (0 = saut net), comme un doigt qui glisse sur la corde.
-    { id: "glide", label: "Glissé", min: 0, max: 0.5, default: 0, step: 0.005, unit: "s", modulatable: false },
+    { id: "shape", label: "Shape", min: 0, max: 3, default: 0, options: ["Sine", "Square", "Triangle", "Saw"] },
+    // Goes down to 0.1 Hz to act as a slow oscillator (modulation).
+    { id: "frequency", label: "Frequency", min: 0.1, max: 2000, default: 220, scale: "log", unit: "Hz" },
+    // Time to slide from one received note to the next (0 = clean jump), like a finger sliding on a string.
+    { id: "glide", label: "Glide", min: 0, max: 0.5, default: 0, step: 0.005, unit: "s", modulatable: false },
 ];
 
-/** Oscillateur continu (sinus, carré, triangle, dent de scie). Pour le découper en notes, le faire passer dans une Enveloppe. */
+/** Continuous oscillator (sine, square, triangle, sawtooth). To cut it into notes, run it through an Envelope. */
 export const sine: ModuleDef = {
     type: "sine",
-    label: "Oscillateur",
+    label: "Oscillator",
     icon: "∿",
     category: "source",
-    // Une note reçue (depuis un Clavier) fixe la fréquence jusqu'à la suivante.
+    // A received note (e.g. from a Keyboard) sets the frequency until the next one.
     inputs: [{ id: "note", kind: "trigger", label: "Note" }],
     outputs: [{ id: "out", kind: "audio" }],
     params,
     create(values) {
-        // Niveau fixe : le volume se règle avec un bloc Volume.
+        // Fixed level: loudness is set with a Volume block.
         const source = new Tone.Oscillator({ type: SHAPES[values.shape] ?? "sine", volume: SOURCE_DB });
         const frequency = driven(source.frequency, paramDef(params, "frequency"), values.frequency);
         let glide = values.glide ?? 0;
-        // Échantillons pour la mini-onde affichée dans le bloc.
-        // ~0,34 s de mémoire à 48 kHz : assez pour caler l'onde jusqu'à ~7 Hz.
+        // Samples for the mini-wave shown in the block.
+        // ~0.34 s of memory at 48 kHz: enough to lock the wave down to ~7 Hz.
         const waveform = new Tone.Waveform(16384);
         source.connect(waveform);
         return {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { engine } from "../audio/engine";
 import { noteName } from "../modules/scale";
 
-/** Dernière note jouée par la Gamme, en grand. */
+/** Last note played by the Scale, shown big. */
 export function NoteDisplay({ nodeId }: { nodeId: string }) {
     const [midi, setMidi] = useState(-1);
     useEffect(() => {
@@ -18,12 +18,12 @@ export function NoteDisplay({ nodeId }: { nodeId: string }) {
     return (
         <div className="note-display" aria-live="off">
             {midi >= 0 ? (
-                // La clé relance la petite animation à chaque nouvelle note.
+                // The key restarts the little animation on each new note.
                 <span key={midi} className="note-name">
                     {noteName(midi)}
                 </span>
             ) : (
-                <span className="note-idle">en attente d'un déclenchement</span>
+                <span className="note-idle">waiting for a trigger</span>
             )}
         </div>
     );

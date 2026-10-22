@@ -3,16 +3,16 @@ import { useReactFlow } from "@xyflow/react";
 import { useGraph } from "../store/graph";
 import { EXAMPLES } from "../store/example";
 
-/** Tapis vide : invitation à poser un bloc, ou à charger un modèle dans la liste. */
+/** Empty mat: an invitation to drop a block, or to load a preset from the list. */
 export function EmptyMat() {
-    // Seulement une fois que tous les blocs ont fini de tomber.
+    // Only once all blocks have finished falling.
     const empty = useGraph((s) => s.nodes.length === 0);
     const loadExample = useGraph((s) => s.loadExample);
     const { fitView } = useReactFlow();
     const [open, setOpen] = useState(false);
     const menu = useRef<HTMLDivElement>(null);
 
-    // Fermer le menu au clic à l'extérieur ou avec Échap.
+    // Close the menu on an outside click or with Escape.
     useEffect(() => {
         if (!open) return;
         const close = (e: PointerEvent) => {
@@ -32,13 +32,13 @@ export function EmptyMat() {
     const load = (id: string) => {
         setOpen(false);
         loadExample(id);
-        // Recadrer une fois les blocs mesurés.
+        // Refit the view once the blocks are measured.
         requestAnimationFrame(() => requestAnimationFrame(() => fitView({ padding: 0.1, duration: 400 })));
     };
 
     return (
         <div className="empty-mat">
-            <p>Le tapis est vide. Glisse un bloc depuis la palette pour commencer.</p>
+            <p>The mat is empty. Drag a block from the palette to get started.</p>
             <div className="example-picker" ref={menu}>
                 <button
                     type="button"
@@ -47,7 +47,7 @@ export function EmptyMat() {
                     aria-expanded={open}
                     onClick={() => setOpen((o) => !o)}
                 >
-                    Charger un modèle
+                    Load a preset
                     <span className={`example-caret ${open ? "is-open" : ""}`} aria-hidden>
                         ▾
                     </span>

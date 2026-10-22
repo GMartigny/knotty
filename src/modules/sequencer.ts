@@ -5,10 +5,10 @@ import type { ModuleDef, ParamDef, TriggerListener } from "./types";
 export const SEQ_ROWS = 4;
 export const SEQ_STEPS = 16;
 
-/** Motifs de départ, un entier par ligne : le bit i allume le pas i. */
+/** Starting patterns, one integer per row: bit i turns step i on. */
 const DEFAULT_PATTERNS = [
-    0b0101010101010101, // un coup sur deux
-    0b0001000000010000, // contretemps
+    0b0101010101010101, // every other step
+    0b0001000000010000, // offbeat
     0b0000000000000000,
     0b0000000000000000,
 ];
@@ -20,7 +20,7 @@ export const toggleStep = (pattern: number, step: number) => pattern ^ (1 << ste
 
 const rowParams: ParamDef[] = Array.from({ length: SEQ_ROWS }, (_, row) => ({
     id: rowParam(row),
-    label: `Ligne ${row + 1}`,
+    label: `Row ${row + 1}`,
     min: 0,
     max: 2 ** SEQ_STEPS - 1,
     default: DEFAULT_PATTERNS[row] ?? 0,
@@ -29,18 +29,18 @@ const rowParams: ParamDef[] = Array.from({ length: SEQ_ROWS }, (_, row) => ({
 
 export const sequencer: ModuleDef = {
     type: "sequencer",
-    label: "Séquenceur",
+    label: "Sequencer",
     icon: "▦",
     category: "sequencer",
     inputs: [],
     outputs: Array.from({ length: SEQ_ROWS }, (_, row) => ({
         id: rowOutput(row),
         kind: "trigger" as const,
-        label: `Ligne ${row + 1}`,
+        label: `Row ${row + 1}`,
         inline: true,
     })),
     params: [
-        // Le tempo pilote tout le séquenceur : pas de modulation.
+        // The tempo drives the whole sequencer: no modulation.
         { id: "bpm", label: "Tempo", min: 50, max: 200, default: 110, step: 1, unit: "bpm", modulatable: false },
         ...rowParams,
     ],
@@ -52,8 +52,8 @@ export const sequencer: ModuleDef = {
         const listeners = Array.from({ length: SEQ_ROWS }, () => new Set<TriggerListener>());
         let current = -1;
 
-        // Abonnement à l'horloge commune : le pas est déduit de la position du transport,
-        // donc tous les séquenceurs restent calés entre eux, et un nouveau démarre au pas suivant.
+        // Subscribe to the shared clock: the step comes from the transport position,
+        // so all sequencers stay in sync, and a new one starts on the next step.
         const unsubscribe = onSixteenth((time, n) => {
             const step = n % SEQ_STEPS;
             for (let row = 0; row < SEQ_ROWS; row++) {

@@ -12,7 +12,7 @@ const fromSlider = (p: ParamDef, t: number) => {
 };
 
 const format = (p: ParamDef, v: number) => {
-    // Durées de moins d'une seconde en millisecondes : « 2 ms » plutôt que « 0.00 s ».
+    // Durations under a second in milliseconds: "2 ms" rather than "0.00 s".
     if (p.unit === "s" && v < 1) return `${Math.round(v * 1000)} ms`;
     const n = Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? `${v}` : v.toFixed(v < 10 ? 2 : 1);
     return p.unit ? `${n} ${p.unit}` : n;
@@ -22,7 +22,7 @@ interface Props {
     def: ParamDef;
     value: number;
     onChange(value: number): void;
-    /** Un câble est branché sur la prise de modulation de ce réglage. */
+    /** A cable is plugged into this setting's modulation socket. */
     modulated?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
             <label className="param-label" htmlFor={inputId}>
                 {def.label}
                 <output>
-                    {modulated && <span className="mod-badge" aria-label="modulé">∿ </span>}
+                    {modulated && <span className="mod-badge" aria-label="modulated">∿ </span>}
                     {format(def, value)}
                 </output>
             </label>
@@ -77,7 +77,7 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
                     type="target"
                     position={Position.Left}
                     className="socket socket-audio"
-                    title={`Entrée « ${def.label} »`}
+                    title={`"${def.label}" input`}
                 />
             )}
             {isModulatable(def) && (
@@ -86,7 +86,7 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
                     type="target"
                     position={Position.Left}
                     className="socket socket-mod"
-                    title={`Moduler « ${def.label} »`}
+                    title={`Modulate "${def.label}"`}
                 />
             )}
         </div>

@@ -11,7 +11,7 @@ let frame = 0;
 let last = 0;
 let accumulator = 0;
 
-/** Boucle unique pour tous les câbles ; elle s'arrête quand tout est immobile. */
+/** A single loop for all cables; it stops when everything is still. */
 const tick = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
@@ -37,7 +37,7 @@ const wake = () => {
 };
 
 export const physics = {
-    /** Enregistre (ou met à jour) un câble et les éléments SVG à redessiner. */
+    /** Registers (or updates) a cable and the SVG elements to redraw. */
     upsert(id: string, a: Vec, b: Vec, paths: SVGPathElement[]) {
         const entry = entries.get(id);
         if (entry) {
@@ -51,7 +51,7 @@ export const physics = {
         wake();
         return rope.toPath();
     },
-    /** Débranche une extrémité du câble : elle tombe librement. */
+    /** Unplugs one end of the cable: it falls freely. */
     release(id: string, end: "a" | "b") {
         entries.get(id)?.rope.release(end);
         wake();

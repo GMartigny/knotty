@@ -1,22 +1,22 @@
 # knotty
 
-Synthé modulaire ludique dans le navigateur : on pose des blocs sur un tapis et on les relie avec des câbles qui pendent et rebondissent.
+A playful modular synth in the browser: drop blocks on a mat and link them with cables that sag and bounce.
 
-**En ligne : [knotty-synth.vercel.app](https://knotty-synth.vercel.app)** (ordinateur, avec souris)
+**Live: [knotty-synth.vercel.app](https://knotty-synth.vercel.app)** (desktop, with a mouse)
 
-## Comment ça marche
+## How it works
 
-- **Ajouter un bloc** : glisse-le depuis la palette sur le tapis (ou clique dessus).
-- **Brancher** : tire un câble d'une prise à une autre. Pendant le tirage, seules les prises compatibles s'allument.
-- **Débrancher** : tire depuis une prise déjà branchée et lâche dans le vide ; le câble tombe.
-- **Couleur des prises** : orange = son, jaune = déclencheur (séquenceur, clavier), anneau bleu ciel = réglage qu'un son peut faire bouger.
-- **Faire du son** : les sources (Oscillateur, Bruit) sonnent en continu ; une Enveloppe déclenchée par le Séquenceur ou le Clavier les découpe en notes. Tout finit dans la Sortie.
-- **Moduler** : branche un Oscillateur lent sur la prise d'un réglage (fréquence d'un filtre, d'un autre oscillateur…) pour le faire bouger tout seul.
-- **S'y retrouver** : le bloc Commentaire est un cadre redimensionnable avec un texte, pour nommer les parties d'une composition.
-- **Modèles** : la grosse croix en haut à droite vide le tapis, puis « Charger un modèle » propose Doux, Groove et Métal.
-- Ton patch est enregistré automatiquement dans le navigateur.
+- **Add a block**: drag it from the palette onto the mat (or click it).
+- **Plug in**: pull a cable from one socket to another. While pulling, only compatible sockets light up.
+- **Unplug**: pull from a socket that is already plugged in and let go in empty space; the cable falls.
+- **Socket colors**: orange = sound, yellow = trigger (sequencer, keyboard), sky-blue ring = a setting that a sound can move.
+- **Make sound**: sources (Oscillator, Noise) play continuously; an Envelope triggered by the Sequencer or the Keyboard cuts them into notes. Everything ends up in the Output.
+- **Modulate**: plug a slow Oscillator into a setting's socket (a filter's frequency, another oscillator's…) to make it move on its own.
+- **Stay organized**: the Comment block is a resizable frame with some text, to name the parts of a composition.
+- **Presets**: the big cross in the top right clears the mat, then "Load a preset" offers Soft, Groove and Metal.
+- Your patch is saved automatically in the browser.
 
-## Lancer en local
+## Run locally
 
 ```bash
 npm install

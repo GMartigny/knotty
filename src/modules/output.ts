@@ -1,19 +1,19 @@
 import * as Tone from "tone";
 import type { ModuleDef } from "./types";
 
-/** Envoie le son vers les haut-parleurs. Le niveau se règle en amont avec un bloc Volume. */
+/** Sends the sound to the speakers. The level is set upstream with a Volume block. */
 export const output: ModuleDef = {
     type: "output",
-    label: "Sortie",
+    label: "Output",
     icon: "◉",
     category: "output",
     inputs: [{ id: "in", kind: "audio" }],
     outputs: [],
-    // Interrupteur affiché dans l'en-tête du bloc (1 = son actif).
-    params: [{ id: "on", label: "Son", min: 0, max: 1, default: 1, hidden: true }],
+    // Switch shown in the block header (1 = sound on).
+    params: [{ id: "on", label: "Sound", min: 0, max: 1, default: 1, hidden: true }],
     create(params) {
         const node = new Tone.Volume({ volume: -6, mute: params.on === 0 });
-        // Limiteur de sécurité pour protéger les oreilles des résonances extrêmes.
+        // Safety limiter to protect ears from extreme resonances.
         const limiter = new Tone.Limiter(-1).toDestination();
         node.connect(limiter);
         return {

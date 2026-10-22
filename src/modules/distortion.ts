@@ -3,28 +3,28 @@ import { SOURCE_LEVEL, type ModuleDef, type ParamDef } from "./types";
 import { driven, paramDef } from "./mod";
 
 const params: ParamDef[] = [
-    { id: "drive", label: "Intensité", min: 1, max: 60, default: 8, scale: "log", step: 0.1 },
+    { id: "drive", label: "Drive", min: 1, max: 60, default: 8, scale: "log", step: 0.1 },
     { id: "wet", label: "Mix", min: 0, max: 1, default: 1, step: 0.01 },
 ];
 
 /**
- * Le niveau de la partie saturée est compensé pour qu'un son à niveau normal ressorte
- * à peu près aussi fort, quelle que soit l'intensité.
+ * The level of the distorted part is compensated so that a sound at normal level comes out
+ * roughly as loud, whatever the drive.
  */
 const makeup = (drive: number) => SOURCE_LEVEL / Math.tanh(SOURCE_LEVEL * drive);
 
-/** Sature le son : chaud à faible intensité, agressif à forte intensité. */
+/** Saturates the sound: warm at low drive, aggressive at high drive. */
 export const distortion: ModuleDef = {
     type: "distortion",
-    label: "Distorsion",
+    label: "Distortion",
     icon: "ϟ",
     category: "effect",
-    inputs: [{ id: "in", kind: "audio", label: "Entrée" }],
+    inputs: [{ id: "in", kind: "audio", label: "Input" }],
     outputs: [{ id: "out", kind: "audio" }],
     params,
     create(values) {
         const input = new Tone.Gain(1);
-        // Gain d'entrée piloté (et modulable), puis courbe en tangente : plus on pousse, plus ça écrase.
+        // Driven (and modulatable) input gain, then a tanh curve: the harder you push, the more it squashes.
         const boost = new Tone.Gain(0);
         const shaper = new Tone.WaveShaper((x) => Math.tanh(x), 4096);
         const level = new Tone.Gain(makeup(values.drive));

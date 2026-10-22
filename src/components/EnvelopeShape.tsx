@@ -4,10 +4,10 @@ const W = 188;
 const H = 54;
 const PAD = 4;
 
-/** Dessin de la courbe ADSR : chaque phase prend une largeur proportionnelle à sa durée. */
+/** Drawing of the ADSR curve: each phase gets a width proportional to its duration. */
 export function EnvelopeShape({ params }: { params: ParamValues }) {
     const { attack, decay, sustain, hold, release } = params;
-    // Racine carrée : les phases courtes restent visibles à côté des longues.
+    // Square root: short phases stay visible next to long ones.
     const spans = [attack, decay, hold, release].map((s) => Math.sqrt(s));
     const total = spans.reduce((a, b) => a + b, 0) || 1;
     const scale = (W - PAD * 2) / total;
@@ -29,7 +29,7 @@ export function EnvelopeShape({ params }: { params: ParamValues }) {
     const line = pts.map(([px, py], i) => `${i ? "L" : "M"} ${px.toFixed(1)} ${py.toFixed(1)}`).join(" ");
 
     return (
-        <svg className="env-shape" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Forme de l'enveloppe">
+        <svg className="env-shape" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Envelope shape">
             <path d={`${line} Z`} className="env-fill" />
             <path d={line} className="env-line" />
         </svg>

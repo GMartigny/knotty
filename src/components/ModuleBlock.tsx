@@ -15,7 +15,7 @@ import { modPort, type PortDef } from "../modules/types";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
 
-/** Prises placées automatiquement sur le bord du bloc (sorties, ou entrées d'un bloc compact). */
+/** Sockets placed automatically on the block's edge (outputs, or inputs of a compact block). */
 function EdgeSockets({ ports, side }: { ports: PortDef[]; side: "in" | "out" }) {
     const placed = ports.filter((p) => !p.inline);
     return placed.map((port, i) => (
@@ -31,7 +31,7 @@ function EdgeSockets({ ports, side }: { ports: PortDef[]; side: "in" | "out" }) 
     ));
 }
 
-/** Entrées principales en tête du bloc, chacune sur sa ligne avec son nom. */
+/** Main inputs at the top of the block, each on its own row with its name. */
 function InputRows({ ports }: { ports: PortDef[] }) {
     const rows = ports.filter((p) => !p.inline);
     if (!rows.length) return null;
@@ -40,7 +40,7 @@ function InputRows({ ports }: { ports: PortDef[] }) {
             {rows.map((port) => (
                 <div className="port-row" key={port.id}>
                     <span className={`port-dot port-dot-${port.kind}`} aria-hidden />
-                    {port.label ?? "Entrée"}
+                    {port.label ?? "Input"}
                     <Handle
                         id={port.id}
                         type="target"
@@ -54,7 +54,7 @@ function InputRows({ ports }: { ports: PortDef[] }) {
     );
 }
 
-/** Un nœud du tapis : un bloc sonore, ou un Commentaire (cadre de texte). */
+/** A node on the mat: a sound block, or a Comment (text frame). */
 export const ModuleBlock = memo(function ModuleBlock(props: NodeProps<ModuleNode>) {
     return props.data.type === "comment" ? <CommentBlock {...props} /> : <SoundBlock {...props} />;
 });
@@ -65,7 +65,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const removeNode = useGraph((s) => s.removeNode);
     const ref = useRef<HTMLDivElement>(null);
     useLevel(id, ref);
-    // Entrées de ce bloc qui ont au moins un câble branché, sous forme de chaîne stable ("gate,in").
+    // Inputs of this block with at least one plugged cable, as a stable string ("gate,in").
     const pluggedInputs = useGraph((s) =>
         s.edges
             .filter((e) => e.target === id && !e.data?.dropping)
@@ -76,7 +76,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const plugged = new Set(pluggedInputs.split(","));
 
     if (!def) return null;
-    // Un bloc sans réglage (ex. Sortie) se réduit à son en-tête.
+    // A block without settings (e.g. Output) shrinks to its header.
     const compact = !def.params.some((p) => !p.hidden) && def.type !== "sequencer";
 
     return (
@@ -104,15 +104,15 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                         type="button"
                         role="switch"
                         aria-checked={data.params.on !== 0}
-                        aria-label="Son de la sortie"
-                        title={data.params.on !== 0 ? "Couper le son" : "Rétablir le son"}
+                        aria-label="Output sound"
+                        title={data.params.on !== 0 ? "Mute" : "Unmute"}
                         className="toggle nodrag"
                         onClick={() => setParam(id, "on", data.params.on !== 0 ? 0 : 1)}
                     >
                         <span className="toggle-knob" aria-hidden />
                     </button>
                 )}
-                <button className="block-remove nodrag" type="button" aria-label={`Retirer ${def.label}`} onClick={() => removeNode(id)}>
+                <button className="block-remove nodrag" type="button" aria-label={`Remove ${def.label}`} onClick={() => removeNode(id)}>
                     ×
                 </button>
             </header>

@@ -3,7 +3,7 @@ import { defaultParams, type ParamValues, type PortKind } from "../modules/types
 import type { CableEdge, ModuleNode } from "./graph";
 import { commentFrame } from "../modules/comment";
 
-/** Motif de 16 pas à partir des numéros de pas allumés (1 à 16). */
+/** 16-step pattern from the numbers of the steps that are on (1 to 16). */
 const steps = (...on: number[]) => on.reduce((pattern, s) => pattern | (1 << (s - 1)), 0);
 
 const node = (id: string, type: string, x: number, y: number, params: ParamValues = {}): ModuleNode => ({
@@ -13,7 +13,7 @@ const node = (id: string, type: string, x: number, y: number, params: ParamValue
     data: { type, params: { ...defaultParams(registry[type]), ...params } },
 });
 
-/** Cadre de Commentaire (derrière les blocs) pour nommer une partie du patch. */
+/** Comment frame (behind the blocks) to name a part of the patch. */
 const note = (id: string, x: number, y: number, width: number, height: number, text: string): ModuleNode => ({
     ...node(id, "comment", x, y),
     data: { type: "comment", params: {}, text },
@@ -33,24 +33,31 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
 });
 
 /**
- * Patch d'exemple : un petit morceau sur les 4 pistes du séquenceur.
- *  1. Grosse caisse — sinus grave, enveloppe courte, sur les temps
- *  2. Caisse claire — bruit, enveloppe, passe-bande, temps 2 et 4
- *  3. Charley — le même bruit, enveloppe très brève, passe-haut, à contretemps
- *  4. Basse — dent de scie, enveloppe, passe-bas balayé par un oscillateur lent
- * Le tout passe par un mixeur, une réverb légère et la sortie.
- * Mélodie — sur un second séquenceur : triangle vers 800 Hz dont la hauteur est balancée
- * par un sinus lent (atténué par un Volume) ; chaque note tombe ainsi à une hauteur différente.
+ * Example patch: a little tune on the sequencer's 4 tracks.
+ *  1. Kick — low sine, short envelope, on the beats
+ *  2. Snare — noise, envelope, band-pass, beats 2 and 4
+ *  3. Hi-hat — the same noise, very short envelope, high-pass, on the offbeats
+ *  4. Bass — sawtooth, envelope, low-pass swept by a slow oscillator
+ * Everything goes through a mixer, a light reverb and the output.
+ * Melody — on a second sequencer: a triangle around 800 Hz whose pitch is swayed
+ * by a slow sine (attenuated by a Volume), so each note lands on a different pitch.
  */
 function groovePatch(): Patch {
-    // Une ligne par piste ; les enveloppes font ~420 px de haut.
+    // One row per track; envelopes are ~420 px tall.
     const colSource = 460;
     const colEnv = 760;
     const colFilter = 1060;
     const row = (i: number) => i * 470;
     const shortHit = { attack: 0.002, sustain: 0, hold: 0.01 };
+    const MEL_Y = row(4) + 300;
 
     const nodes: ModuleNode[] = [
+        // Comment frames, to find your way around
+        note("note-drums", -40, -70, 1360, 1420, "Drums: kick, snare and hi-hat (sequencer rows 1 to 3)"),
+        note("note-bass", 420, 1360, 900, 710, "Bass (row 4), its filter swept by a slow oscillator"),
+        note("note-melody", -300, MEL_Y - 90, 1620, 770, "Melody: a triangle whose pitch is swayed by a slow sine"),
+        note("note-mix", 1340, 730, 900, 380, "Mix: every track → reverb → output"),
+
         node("seq", "sequencer", 0, row(1) + 330, {
             bpm: 116,
             row0: steps(1, 5, 9, 13, 15),
@@ -59,46 +66,46 @@ function groovePatch(): Patch {
             row3: steps(1, 4, 7, 9, 11, 14),
         }),
 
-        // 1. Grosse caisse
+        // 1. Kick
         node("kick-osc", "sine", colSource, row(0) + 60, { shape: 0, frequency: 52 }),
         node("kick-env", "envelope", colEnv, row(0), { ...shortHit, decay: 0.22, release: 0.08 }),
 
-        // 2 et 3. Caisse claire et charley, à partir d'un seul bruit blanc
+        // 2 and 3. Snare and hi-hat, from a single white noise
         node("noise", "noise", colSource, row(1) + 330, { color: 0 }),
         node("snare-env", "envelope", colEnv, row(1), { ...shortHit, decay: 0.11, release: 0.06 }),
         node("snare-filter", "filter", colFilter, row(1) + 60, { mode: 2, frequency: 1700, Q: 1.2 }),
         node("hat-env", "envelope", colEnv, row(2), { ...shortHit, decay: 0.03, release: 0.02 }),
         node("hat-filter", "filter", colFilter, row(2) + 60, { mode: 1, frequency: 7000, Q: 0.8 }),
 
-        // 4. Basse balayée par un oscillateur lent
+        // 4. Bass swept by a slow oscillator
         node("bass-osc", "sine", colSource, row(3) + 20, { shape: 3, frequency: 55 }),
         node("bass-env", "envelope", colEnv, row(3), { attack: 0.004, decay: 0.18, sustain: 0.35, hold: 0.06, release: 0.12 }),
         node("bass-filter", "filter", colFilter, row(3) + 60, { mode: 0, frequency: 520, Q: 7 }),
         node("lfo", "sine", colSource, row(3) + 340, { shape: 0, frequency: 0.25 }),
 
-        // Mélodie : son propre séquenceur, calé sur le même tempo
-        node("mel-seq", "sequencer", 0, row(4) + 220, {
+        // Melody: its own sequencer, locked to the same tempo
+        node("mel-seq", "sequencer", 0, MEL_Y, {
             bpm: 116,
             row0: steps(1, 4, 7, 9, 10, 13, 15),
             row1: 0,
             row2: 0,
             row3: 0,
         }),
-        node("mel-osc", "sine", colSource, row(4) + 220, { shape: 2, frequency: 800 }),
-        node("mel-lfo", "sine", -260, row(4) + 560, { shape: 0, frequency: 0.37 }),
-        // Ampleur du balancement : −14 dB ≈ ±20 % autour de 800 Hz.
-        node("mel-depth", "volume", 80, row(4) + 560, { volume: -14 }),
-        node("mel-env", "envelope", colEnv, row(4) + 200, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
-        node("mel-vol", "volume", colFilter, row(4) + 260, { volume: -5 }),
+        node("mel-osc", "sine", colSource, MEL_Y, { shape: 2, frequency: 800 }),
+        node("mel-lfo", "sine", -260, MEL_Y + 340, { shape: 0, frequency: 0.37 }),
+        // Sway depth: −14 dB ≈ ±20% around 800 Hz.
+        node("mel-depth", "volume", 80, MEL_Y + 340, { volume: -14 }),
+        node("mel-env", "envelope", colEnv, MEL_Y - 20, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
+        node("mel-vol", "volume", colFilter, MEL_Y + 40, { volume: -5 }),
 
-        // Mélange et sortie
+        // Mix and output
         node("mix", "mixer", 1380, row(1) + 330, { level1: 100, level2: 55, level3: 35, level4: 65 }),
         node("reverb", "reverb", 1680, row(1) + 350, { decay: 2.2, wet: 0.22 }),
         node("out", "output", 1980, row(1) + 400),
     ];
 
     const edges: CableEdge[] = [
-        // Pistes du séquenceur vers les enveloppes
+        // Sequencer tracks to the envelopes
         cable("seq", "row0", "kick-env", "gate", "trigger"),
         cable("seq", "row1", "snare-env", "gate", "trigger"),
         cable("seq", "row2", "hat-env", "gate", "trigger"),
@@ -135,9 +142,9 @@ function groovePatch(): Patch {
 }
 
 /**
- * Patch « Doux » : un point de départ simple et calme.
- * Une note de triangle à 330 Hz, découpée par une enveloppe aux attaques et relâchements doux,
- * adoucie par un passe-bas et noyée dans la réverb, sur un rythme lent et clairsemé.
+ * "Soft" patch: a simple, calm starting point.
+ * A 330 Hz triangle note, cut by an envelope with soft attacks and releases,
+ * mellowed by a low-pass and drowned in reverb, on a slow, sparse rhythm.
  */
 function softPatch(): Patch {
     const nodes: ModuleNode[] = [
@@ -165,23 +172,23 @@ function softPatch(): Patch {
 }
 
 /**
- * Patch « Métal » : un groupe complet à 150 bpm, sur deux séquenceurs.
+ * "Metal" patch: a full band at 150 bpm, on two sequencers.
  *
- * Batterie (séquenceur « batterie ») — piste 1 : double pédale au galop (sinus grave très sec) ;
- * piste 2 : caisse claire sur 2 et 4 (bruit, passe-bande) ; piste 3 : charley en croches (bruit,
- * passe-haut) ; piste 4 : crash en début de mesure (bruit, longue résonance). Mixeur « batterie ».
+ * Drums ("drums" sequencer) — track 1: galloping double kick (very dry low sine);
+ * track 2: snare on 2 and 4 (noise, band-pass); track 3: eighth-note hi-hat (noise,
+ * high-pass); track 4: crash at the start of the bar (noise, long ring). "Drums" mixer.
  *
- * Groupe (séquenceur « groupe ») — piste 1 : guitare rythmique, power chord Mi + Si en dents de scie,
- * « chug » étouffé calé sur la double pédale, très distordu puis filtré comme un baffle ;
- * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : deux guitares solo en harmonie —
- * un triangle lent balaie deux Gammes : Mi mineur pour la première, Sol majeur (mêmes notes, décalées
- * d'un cran) pour la seconde, qui joue donc une tierce au-dessus, comme des guitares jumelles.
- * Attaques nettes, à peine liées, léger vibrato ; très distordu et filtré comme un baffle, écho discret.
+ * Band ("band" sequencer) — track 1: rhythm guitar, E + B power chord in sawtooth,
+ * palm-muted "chug" locked to the double kick, heavily distorted then filtered like a speaker cab;
+ * track 2: eighth-note bass (low square, low-pass); track 3: two lead guitars in harmony —
+ * a slow triangle sweeps two Scales: E minor for the first, G major (the same notes, shifted
+ * by one degree) for the second, which therefore plays a third above, like twin guitars.
+ * Crisp attacks, barely slurred, light vibrato; heavily distorted and filtered like a cab, subtle echo.
  *
- * Mixeur général → réverb discrète → sortie.
+ * Main mixer → subtle reverb → output.
  */
 function metalPatch(): Patch {
-    // Colonnes : déclenchement, sources, enveloppes, traitements, mixage.
+    // Columns: triggering, sources, envelopes, processing, mixing.
     const cSeq = 0;
     const cSrc = 460;
     const cEnv = 760;
@@ -196,13 +203,13 @@ function metalPatch(): Patch {
     const HARM_Y = SOLO_Y + 780;
 
     const nodes: ModuleNode[] = [
-        // ——— Cadres de commentaire, pour s'y retrouver ———
-        note("note-drums", -40, -70, 1360, 1900, "Batterie : grosse caisse, caisse claire, charleston et cymbale"),
-        note("note-band", -40, 1845, 1660, 1040, "Guitare rythmique (power chord Mi + Si) et basse"),
-        note("note-solo", -380, SOLO_Y - 100, 2300, 1320, "Deux guitares solo en harmonie : la seconde joue une tierce au-dessus"),
-        note("note-mix", 1940, 630, 1220, 1370, "Mixage : chaque piste → réverb → sortie"),
+        // ——— Comment frames, to find your way around ———
+        note("note-drums", -40, -70, 1360, 1900, "Drums: kick, snare, hi-hat and cymbal"),
+        note("note-band", -40, 1845, 1660, 1040, "Rhythm guitar (E + B power chord) and bass"),
+        note("note-solo", -380, SOLO_Y - 100, 2300, 1320, "Two lead guitars in harmony: the second one plays a third above"),
+        note("note-mix", 1940, 630, 1220, 1370, "Mix: every track → reverb → output"),
 
-        // ——— Batterie ———
+        // ——— Drums ———
         node("drums", "sequencer", cSeq, 700, {
             bpm: 150,
             row0: gallop,
@@ -221,12 +228,12 @@ function metalPatch(): Patch {
         node("crash-filter", "filter", cFx1, 1470, { mode: 1, frequency: 5500, Q: 0.7 }),
         node("drum-mix", "mixer", cMix, 700, { level1: 100, level2: 80, level3: 30, level4: 35 }),
 
-        // ——— Guitare rythmique ———
+        // ——— Rhythm guitar ———
         node("band", "sequencer", cSeq, 2420, {
             bpm: 150,
             row0: gallop,
             row1: steps(1, 3, 5, 7, 9, 11, 13, 15),
-            // Solo : peu de notes, tenues, en contretemps.
+            // Solo: few notes, held, on the offbeats.
             row2: steps(1, 4, 7, 9, 12, 15),
             row3: 0,
         }),
@@ -236,40 +243,40 @@ function metalPatch(): Patch {
         node("gtr-dist", "distortion", cFx1, 1960, { drive: 45, wet: 1 }),
         node("gtr-cab", "filter", cFx2, 1960, { mode: 0, frequency: 2800, Q: 1.5 }),
 
-        // ——— Basse ———
+        // ——— Bass ———
         node("bass-osc", "sine", cSrc, 2570, { shape: 1, frequency: 41.2 }),
         node("bass-env", "envelope", cEnv, 2380, { attack: 0.004, decay: 0.12, sustain: 0.3, hold: 0.04, release: 0.08 }),
         node("bass-filter", "filter", cFx1, 2440, { mode: 0, frequency: 500, Q: 2 }),
 
-        // ——— Guitare solo ———
-        // Phrases qui montent et redescendent, en Mi mineur, de Mi3 à Mi5.
+        // ——— Lead guitar ———
+        // Phrases that rise and fall, in E minor, from E3 to E5.
         node("lead-sweep", "sine", cSeq - 340, SOLO_Y, { shape: 2, frequency: 0.3 }),
         node("lead-scale", "scale", cSeq, SOLO_Y, { scale: 1, root: 2, octave: 0 }),
-        // Glissé très court : lie les notes sans l'effet « sirène ».
+        // Very short glide: slurs the notes without the "siren" effect.
         node("lead-osc", "sine", cSrc, SOLO_Y, { shape: 3, frequency: 330, glide: 0.015 }),
         node("vibrato", "sine", cSeq - 340, SOLO_Y + 410, { shape: 0, frequency: 6 }),
-        // Ampleur du vibrato : −40 dB ≈ ±1 %, juste de quoi faire vivre les notes tenues.
+        // Vibrato depth: −40 dB ≈ ±1%, just enough to bring held notes to life.
         node("vibrato-depth", "volume", cSeq, SOLO_Y + 430, { volume: -40 }),
         node("lead-env", "envelope", cEnv, SOLO_Y - 40, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
         node("lead-dist", "distortion", cFx1, SOLO_Y + 20, { drive: 45, wet: 1 }),
         node("lead-echo", "echo", cFx2, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
-        // Filtré bas, comme le baffle d'un ampli : retire le grésillement aigu.
+        // Filtered low, like an amp's speaker cab: removes the harsh fizz.
         node("lead-filter", "filter", cFx3, SOLO_Y + 20, { mode: 0, frequency: 2600, Q: 1.8 }),
-        // Seconde guitare : Sol majeur a les mêmes notes que Mi mineur, décalées d'un degré,
-        // donc pour un même signal elle joue la tierce au-dessus de la première.
+        // Second guitar: G major has the same notes as E minor, shifted by one degree,
+        // so for the same signal it plays a third above the first one.
         node("harm-scale", "scale", cSeq, HARM_Y, { scale: 0, root: 4, octave: 0 }),
         node("harm-osc", "sine", cSrc, HARM_Y, { shape: 3, frequency: 392, glide: 0.015 }),
         node("harm-env", "envelope", cEnv, HARM_Y, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
         node("harm-dist", "distortion", cFx1, HARM_Y, { drive: 45, wet: 1 }),
 
-        // ——— Mixage ———
+        // ——— Mix ———
         node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 45 }),
         node("reverb", "reverb", cBus + 300, 1720, { decay: 1.8, wet: 0.15 }),
         node("out", "output", cBus + 600, 1780),
     ];
 
     const edges: CableEdge[] = [
-        // Batterie
+        // Drums
         cable("drums", "row0", "kick-env", "gate", "trigger"),
         cable("drums", "row1", "snare-env", "gate", "trigger"),
         cable("drums", "row2", "hat-env", "gate", "trigger"),
@@ -286,19 +293,19 @@ function metalPatch(): Patch {
         cable("hat-filter", "out", "drum-mix", "in3"),
         cable("crash-filter", "out", "drum-mix", "in4"),
 
-        // Guitare rythmique
+        // Rhythm guitar
         cable("band", "row0", "gtr-env", "gate", "trigger"),
         cable("gtr-root", "out", "gtr-env", "in"),
         cable("gtr-fifth", "out", "gtr-env", "in"),
         cable("gtr-env", "out", "gtr-dist", "in"),
         cable("gtr-dist", "out", "gtr-cab", "in"),
 
-        // Basse
+        // Bass
         cable("band", "row1", "bass-env", "gate", "trigger"),
         cable("bass-osc", "out", "bass-env", "in"),
         cable("bass-env", "out", "bass-filter", "in"),
 
-        // Guitare solo
+        // Lead guitar
         cable("lead-sweep", "out", "lead-scale", "in"),
         cable("band", "row2", "lead-scale", "gate", "trigger"),
         cable("lead-scale", "out", "lead-osc", "note", "trigger"),
@@ -309,7 +316,7 @@ function metalPatch(): Patch {
         cable("lead-env", "out", "lead-dist", "in"),
         cable("lead-dist", "out", "lead-echo", "in"),
         cable("lead-echo", "out", "lead-filter", "in"),
-        // Seconde guitare, en harmonie : même balayage, même rythme, même vibrato, même écho.
+        // Second guitar, in harmony: same sweep, same rhythm, same vibrato, same echo.
         cable("lead-sweep", "out", "harm-scale", "in"),
         cable("band", "row2", "harm-scale", "gate", "trigger"),
         cable("harm-scale", "out", "harm-osc", "note", "trigger"),
@@ -319,7 +326,7 @@ function metalPatch(): Patch {
         cable("harm-env", "out", "harm-dist", "in"),
         cable("harm-dist", "out", "lead-echo", "in"),
 
-        // Mixage
+        // Mix
         cable("drum-mix", "out", "bus", "in1"),
         cable("gtr-cab", "out", "bus", "in2"),
         cable("bass-filter", "out", "bus", "in3"),
@@ -338,14 +345,14 @@ export interface Example {
     build(): Patch;
 }
 
-/** Modèles proposés au chargement, dans l'ordre du menu. */
+/** Presets offered for loading, in menu order. */
 export const EXAMPLES: Example[] = [
-    { id: "soft", label: "Doux", description: "Un séquenceur, un oscillateur, une note calme : idéal pour démarrer", build: softPatch },
-    { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
-    { id: "metal", label: "Métal", description: "Un groupe complet : batterie, guitares distordues, basse et solo", build: metalPatch },
+    { id: "soft", label: "Soft", description: "One sequencer, one oscillator, one calm note: perfect to get started", build: softPatch },
+    { id: "groove", label: "Groove", description: "Drums, bass and melody on two sequencers", build: groovePatch },
+    { id: "metal", label: "Metal", description: "A full band: drums, distorted guitars, bass and solos", build: metalPatch },
 ];
 
-/** Modèle chargé à la toute première visite. */
+/** Preset loaded on the very first visit. */
 const FIRST_VISIT = "groove";
 
 export const examplePatch = (id = FIRST_VISIT): Patch =>

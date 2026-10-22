@@ -6,18 +6,18 @@ const H = 54;
 const PAD = 4;
 const F_MIN = 20;
 const F_MAX = 20000;
-/** Plage verticale affichée, en dB : la résonance peut monter au-dessus de 0. */
+/** Displayed vertical range, in dB: resonance can go above 0. */
 const DB_TOP = 24;
 const DB_BOTTOM = -36;
 const POINTS = 120;
 const TYPES: BiquadFilterType[] = ["lowpass", "highpass", "bandpass"];
 
-/** Fréquences de l'axe horizontal, réparties en échelle logarithmique (comme l'oreille). */
+/** Frequencies on the horizontal axis, on a logarithmic scale (like the ear). */
 const FREQS = Float32Array.from({ length: POINTS }, (_, i) => F_MIN * Math.pow(F_MAX / F_MIN, i / (POINTS - 1)));
 
 /**
- * Un filtre du navigateur, hors de tout son, qui sert uniquement à calculer la courbe :
- * elle est donc exactement celle que le filtre réel applique.
+ * A browser filter, outside of any sound, used only to compute the curve:
+ * so it is exactly the one the real filter applies.
  */
 let probe: BiquadFilterNode | null = null;
 const getProbe = () => {
@@ -31,7 +31,7 @@ const y = (db: number) => {
     return PAD + ((DB_TOP - clamped) / (DB_TOP - DB_BOTTOM)) * (H - PAD * 2);
 };
 
-/** Courbe de réponse du Filtre : quelles fréquences passent, lesquelles sont coupées. */
+/** Filter response curve: which frequencies pass, which are cut. */
 export function FilterCurve({ params }: { params: ParamValues }) {
     const { mode, frequency, Q } = params;
 
@@ -49,8 +49,8 @@ export function FilterCurve({ params }: { params: ParamValues }) {
     const zero = y(0);
 
     return (
-        <svg className="filter-curve" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fréquences qui passent dans le filtre">
-            {/* Repère 0 dB : au-dessus, la résonance renforce ; en dessous, le filtre coupe. */}
+        <svg className="filter-curve" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Frequencies passing through the filter">
+            {/* 0 dB line: above it, resonance boosts; below it, the filter cuts. */}
             <line x1={0} x2={W} y1={zero} y2={zero} className="filter-zero" />
             <path d={`${line} L ${W - PAD} ${H} L ${PAD} ${H} Z`} className="env-fill" />
             <path d={line} className="env-line" />

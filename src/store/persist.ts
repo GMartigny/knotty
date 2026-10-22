@@ -6,16 +6,16 @@ import type { CableEdge, ModuleNode } from "./graph";
 const KEY = "knotty:patch:v1";
 const SAVE_DELAY_MS = 300;
 
-/** Ce qui est enregistré : uniquement l'état durable, sans sélection, mesures ni animations. */
+/** What gets saved: only durable state, without selection, measurements or animations. */
 interface SavedPatch {
     nodes: { id: string; type: string; x: number; y: number; params: ParamValues; text?: string; w?: number; h?: number }[];
     edges: { source: string; sourceHandle: string; target: string; targetHandle: string }[];
 }
 
 /**
- * Patch enregistré, nettoyé pour la version actuelle de l'app : types de blocs inconnus ignorés,
- * réglages complétés par leurs valeurs par défaut, câbles vers des prises disparues ou incompatibles retirés.
- * `null` s'il n'y a rien d'enregistré ou si c'est illisible.
+ * Saved patch, cleaned up for the current app version: unknown block types are ignored,
+ * settings are filled with their defaults, cables to missing or incompatible sockets are removed.
+ * `null` if nothing is saved or it is unreadable.
  */
 export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null {
     let saved: SavedPatch;
@@ -32,7 +32,7 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
         .filter((n) => registry[n.type])
         .map((n) => {
             const defaults = defaultParams(registry[n.type]);
-            // Seuls les réglages qui existent encore sont repris.
+            // Only settings that still exist are kept.
             const params = Object.fromEntries(
                 Object.entries(defaults).map(([id, value]) => [id, Number.isFinite(n.params?.[id]) ? n.params[id] : value]),
             );
@@ -72,7 +72,7 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-/** Enregistre le patch peu après la dernière modification (un glissement de bloc n'écrit qu'une fois). */
+/** Saves the patch shortly after the last change (dragging a block writes only once). */
 export function savePatch(nodes: ModuleNode[], edges: CableEdge[]) {
     clearTimeout(timer);
     timer = setTimeout(() => {
@@ -103,7 +103,7 @@ export function savePatch(nodes: ModuleNode[], edges: CableEdge[]) {
         try {
             localStorage.setItem(KEY, JSON.stringify(patch));
         } catch {
-            // Stockage indisponible (navigation privée, quota) : l'app continue sans sauvegarde.
+            // Storage unavailable (private browsing, quota): the app keeps going without saving.
         }
     }, SAVE_DELAY_MS);
 }

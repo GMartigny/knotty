@@ -6,7 +6,7 @@ import type { ParamValues } from "../modules/types";
 
 const BEAT = 4;
 
-/** Pas courant du séquenceur, relu à chaque frame tant que le bloc est affiché. */
+/** Current sequencer step, read every frame while the block is displayed. */
 function usePlayhead(nodeId: string) {
     const [step, setStep] = useState(-1);
     useEffect(() => {
@@ -31,7 +31,7 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
     const playhead = usePlayhead(nodeId);
 
     return (
-        <div className="seq" role="grid" aria-label="Pas du séquenceur">
+        <div className="seq" role="grid" aria-label="Sequencer steps">
             {Array.from({ length: SEQ_ROWS }, (_, row) => {
                 const pattern = params[rowParam(row)] ?? 0;
                 return (
@@ -40,7 +40,7 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                             {row + 1}
                         </span>
                         <div className="seq-steps">
-                            {/* Un groupe par temps (4 pas), pour lire la mesure d'un coup d'œil. */}
+                            {/* One group per beat (4 steps), to read the bar at a glance. */}
                             {Array.from({ length: SEQ_STEPS / BEAT }, (_, beat) => (
                                 <div className="seq-beat" key={beat}>
                                     {Array.from({ length: BEAT }, (_, i) => {
@@ -52,7 +52,7 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                                                 type="button"
                                                 role="gridcell"
                                                 aria-pressed={on}
-                                                aria-label={`Ligne ${row + 1}, pas ${step + 1}`}
+                                                aria-label={`Row ${row + 1}, step ${step + 1}`}
                                                 className={`seq-step nodrag ${on ? "is-on" : ""} ${step === playhead ? "is-playing" : ""}`}
                                                 onClick={() => onChange(rowParam(row), toggleStep(pattern, step))}
                                             />
@@ -66,7 +66,7 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                             type="source"
                             position={Position.Right}
                             className="socket socket-trigger"
-                            title={`Sortie ligne ${row + 1}`}
+                            title={`Row ${row + 1} output`}
                         />
                     </div>
                 );

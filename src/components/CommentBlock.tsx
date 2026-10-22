@@ -2,8 +2,8 @@ import { NodeResizer, type NodeProps } from "@xyflow/react";
 import { useGraph, type ModuleNode } from "../store/graph";
 
 /**
- * Commentaire : cadre redimensionnable avec un texte, posé derrière les blocs.
- * Sert à nommer et regrouper les parties d'une composition (« Batterie », « Solo »…).
+ * Comment: a resizable frame with some text, placed behind the blocks.
+ * Used to name and group the parts of a composition ("Drums", "Solo"…).
  */
 export function CommentBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const setText = useGraph((s) => s.setText);
@@ -11,7 +11,7 @@ export function CommentBlock({ id, data, selected }: NodeProps<ModuleNode>) {
 
     return (
         <div className={["comment", selected && "is-selected", data.removing && "is-removing"].filter(Boolean).join(" ")}>
-            {/* Poignées dans les coins et sur les bords, visibles au survol. */}
+            {/* Handles on the corners and edges, visible on hover. */}
             <NodeResizer minWidth={160} minHeight={90} handleClassName="comment-handle" lineClassName="comment-line" />
             <header className="comment-head">
                 <span className="comment-icon" aria-hidden>
@@ -20,15 +20,15 @@ export function CommentBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                 <textarea
                     className="comment-text nodrag nowheel"
                     value={data.text ?? ""}
-                    placeholder="Écris une note…"
-                    aria-label="Texte du commentaire"
+                    placeholder="Write a note…"
+                    aria-label="Comment text"
                     rows={1}
                     spellCheck={false}
                     onChange={(e) => setText(id, e.target.value)}
-                    // Échap rend la main au tapis (et aux raccourcis comme Suppr).
+                    // Escape hands control back to the mat (and to shortcuts like Delete).
                     onKeyDown={(e) => e.key === "Escape" && e.currentTarget.blur()}
                 />
-                <button className="block-remove nodrag" type="button" aria-label="Retirer le commentaire" onClick={() => removeNode(id)}>
+                <button className="block-remove nodrag" type="button" aria-label="Remove comment" onClick={() => removeNode(id)}>
                     ×
                 </button>
             </header>

@@ -1,20 +1,20 @@
 import * as Tone from "tone";
 
-/** Appelé à chaque double-croche avec l'heure audio et le numéro de double-croche depuis le début. */
+/** Called on each sixteenth note with the audio time and the sixteenth number since the start. */
 export type SixteenthListener = (time: number, sixteenth: number) => void;
 
 const listeners = new Set<SixteenthListener>();
 let started = false;
 
 /**
- * Horloge commune à tous les séquenceurs : une seule boucle « 16n » sur le transport,
- * créée au démarrage de l'app (transport arrêté, tempo stable), qui distribue chaque double-croche.
+ * Clock shared by all sequencers: a single "16n" loop on the transport,
+ * created when the app starts (transport stopped, tempo stable), which dispatches every sixteenth.
  *
- * Pourquoi pas une boucle par séquenceur : quand Tone.js crée une boucle alors que le transport
- * tourne déjà, il convertit la prochaine position en secondes puis de nouveau en position avec
- * le tempo du moment. Juste après un changement de tempo (qui s'applique avec un léger décalage),
- * l'aller-retour ne se compense pas et le premier pas est planifié plusieurs secondes trop tard,
- * d'autant plus que le transport tourne depuis longtemps. S'abonner à cette horloge-ci ne planifie rien.
+ * Why not one loop per sequencer: when Tone.js creates a loop while the transport
+ * is already running, it converts the next position to seconds and back to a position with
+ * the current tempo. Right after a tempo change (which applies with a slight delay),
+ * the round trip doesn't cancel out and the first step is scheduled several seconds too late,
+ * all the more so the longer the transport has been running. Subscribing to this clock schedules nothing.
  */
 export function startClock() {
     if (started) return;
@@ -31,7 +31,7 @@ export function startClock() {
     );
 }
 
-/** S'abonne aux doubles-croches ; renvoie la fonction de désabonnement. */
+/** Subscribes to sixteenth notes; returns the unsubscribe function. */
 export function onSixteenth(fn: SixteenthListener) {
     startClock();
     listeners.add(fn);

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useGraph } from "../store/graph";
 
-/** Délai pendant lequel le second clic confirme, en ms. */
+/** Window during which the second click confirms, in ms. */
 const ARM_MS = 3000;
 
 /**
- * Grosse croix pour tout effacer. Premier clic : le bouton s'arme et demande confirmation ;
- * second clic dans les 3 s : tous les blocs tombent.
+ * Big cross to clear everything. First click: the button arms itself and asks for confirmation;
+ * second click within 3 s: all the blocks fall.
  */
 export function ClearButton() {
     const clearAll = useGraph((s) => s.clearAll);
@@ -25,7 +25,7 @@ export function ClearButton() {
         <button
             type="button"
             className={`clear-button ${armed ? "is-armed" : ""}`}
-            aria-label={armed ? "Confirmer : tout effacer" : "Tout effacer"}
+            aria-label={armed ? "Confirm: clear everything" : "Clear everything"}
             onClick={() => {
                 if (!armed) return setArmed(true);
                 setArmed(false);
@@ -35,7 +35,7 @@ export function ClearButton() {
             <span className="clear-x" aria-hidden>
                 ×
             </span>
-            {armed && <span className="clear-label">Tout effacer ?</span>}
+            {armed && <span className="clear-label">Clear everything?</span>}
         </button>
     );
 }

@@ -3,21 +3,21 @@ import type { ModuleDef, ParamDef } from "./types";
 import { driven, paramDef } from "./mod";
 
 const params: ParamDef[] = [
-    // Changer la durée recalcule toute la réverbération : pas de modulation.
-    { id: "decay", label: "Durée", min: 0.3, max: 10, default: 3, step: 0.1, unit: "s", modulatable: false },
+    // Changing the decay recomputes the whole reverb: no modulation.
+    { id: "decay", label: "Decay", min: 0.3, max: 10, default: 3, step: 0.1, unit: "s", modulatable: false },
     { id: "wet", label: "Mix", min: 0, max: 1, default: 0.5, step: 0.01 },
 ];
 
 export const reverb: ModuleDef = {
     type: "reverb",
-    label: "Réverb",
+    label: "Reverb",
     icon: "◎",
     category: "effect",
-    inputs: [{ id: "in", kind: "audio", label: "Entrée" }],
+    inputs: [{ id: "in", kind: "audio", label: "Input" }],
     outputs: [{ id: "out", kind: "audio" }],
     params,
     create(values) {
-        // La génération de la réponse impulsionnelle est asynchrone : Tone gère l'attente.
+        // Generating the impulse response is asynchronous: Tone handles the wait.
         const node = new Tone.Reverb({ decay: values.decay });
         const wet = driven(node.wet, paramDef(params, "wet"), values.wet);
         return {

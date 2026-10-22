@@ -1,46 +1,46 @@
 import * as Tone from "tone";
 import { SOURCE_LEVEL, type ModuleDef, type TriggerListener } from "./types";
 
-/** Degrés de chaque gamme, en demi-tons depuis la tonique. */
+/** Degrees of each scale, in semitones from the root. */
 const SCALES = [
-    [0, 2, 4, 5, 7, 9, 11], // majeure
-    [0, 2, 3, 5, 7, 8, 10], // mineure
-    [0, 3, 5, 7, 10], // pentatonique (mineure)
+    [0, 2, 4, 5, 7, 9, 11], // major
+    [0, 2, 3, 5, 7, 8, 10], // minor
+    [0, 3, 5, 7, 10], // pentatonic (minor)
 ];
-/** Toniques proposées, en demi-tons depuis Do. */
+/** Available roots, in semitones from C. */
 const ROOTS = [0, 2, 4, 5, 7, 9, 11];
 const OCTAVES = [3, 4, 5];
-/** Étendue couverte par le signal, en octaves. */
+/** Range covered by the signal, in octaves. */
 const SPAN = 2;
 
-const NAMES = ["Do", "Do♯", "Ré", "Ré♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"];
-/** Nom d'une note MIDI, ex. 67 → « Sol4 ». */
+const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+/** Name of a MIDI note, e.g. 67 → "G4". */
 export const noteName = (midi: number) => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
 const frequencyOf = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
 /**
- * Transforme un signal en notes justes : à chaque déclenchement, la valeur du signal (−1 … 1)
- * choisit une note de la gamme sur deux octaves. Sans signal branché, joue la tonique.
+ * Turns a signal into in-tune notes: on each trigger, the signal value (−1 … 1)
+ * picks a note of the scale over two octaves. With no signal plugged in, plays the root.
  */
 export const scale: ModuleDef = {
     type: "scale",
-    label: "Gamme",
+    label: "Scale",
     icon: "♯",
     category: "sequencer",
     inputs: [
         { id: "in", kind: "audio", label: "Signal" },
-        { id: "gate", kind: "trigger", label: "Déclencheur" },
+        { id: "gate", kind: "trigger", label: "Trigger" },
     ],
     outputs: [{ id: "out", kind: "trigger", label: "Notes" }],
     params: [
-        { id: "scale", label: "Gamme", min: 0, max: 2, default: 2, options: ["Majeure", "Mineure", "Penta"] },
-        { id: "root", label: "Tonique", min: 0, max: 6, default: 0, options: ["Do", "Ré", "Mi", "Fa", "Sol", "La", "Si"] },
+        { id: "scale", label: "Scale", min: 0, max: 2, default: 2, options: ["Major", "Minor", "Penta"] },
+        { id: "root", label: "Root", min: 0, max: 6, default: 0, options: ["C", "D", "E", "F", "G", "A", "B"] },
         { id: "octave", label: "Octave", min: 0, max: 2, default: 1, options: OCTAVES.map(String) },
     ],
     create(values) {
         const v = { ...values };
         const input = new Tone.Gain(1);
-        // Valeur instantanée du signal, lue à chaque déclenchement.
+        // Instantaneous signal value, read on each trigger.
         const meter = new Tone.DCMeter();
         input.connect(meter);
         const listeners = new Set<TriggerListener>();
@@ -48,7 +48,7 @@ export const scale: ModuleDef = {
 
         const pick = () => {
             const degrees = SCALES[v.scale] ?? SCALES[2];
-            // Toutes les notes de la gamme sur l'étendue, tonique de l'octave du dessus comprise.
+            // All the scale's notes over the range, including the root of the octave above.
             const notes: number[] = [];
             for (let o = 0; o < SPAN; o++) for (const d of degrees) notes.push(o * 12 + d);
             notes.push(SPAN * 12);

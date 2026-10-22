@@ -1,18 +1,18 @@
 import type { ModuleDef } from "./types";
 
-/** Taille d'un Commentaire neuf ; ensuite, c'est l'utilisateur qui le redimensionne. */
+/** Size of a new Comment; after that, the user resizes it. */
 export const COMMENT_SIZE = { width: 380, height: 240 };
 
-/** Un Commentaire est un cadre posé derrière les blocs et les câbles, à la taille choisie. */
+/** A Comment is a frame placed behind blocks and cables, at the chosen size. */
 export const commentFrame = (width: number, height: number) => ({ width, height, zIndex: -1 });
 
 /**
- * Commentaire : un cadre redimensionnable avec un texte, posé derrière les blocs
- * pour regrouper et nommer les parties d'une composition. Aucun son, aucune prise.
+ * Comment: a resizable frame with some text, placed behind blocks
+ * to group and name the parts of a composition. No sound, no sockets.
  */
 export const comment: ModuleDef = {
     type: "comment",
-    label: "Commentaire",
+    label: "Comment",
     icon: "✎",
     category: "note",
     inputs: [],

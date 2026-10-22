@@ -7,28 +7,28 @@ export const channelLevel = (i: number) => `level${i + 1}`;
 
 const params: ParamDef[] = Array.from({ length: MIXER_CHANNELS }, (_, i) => ({
     id: channelLevel(i),
-    label: `Voie ${i + 1}`,
+    label: `Channel ${i + 1}`,
     min: 0,
     max: 100,
     default: 75,
     step: 1,
     unit: "%",
-    // Une seule prise par ligne : celle de l'entrée son de la voie.
+    // A single socket per row: the channel's audio input.
     modulatable: false as const,
     inputPort: channelInput(i),
 }));
 
-/** Mélange jusqu'à 4 sons, chacun avec son niveau, vers une seule sortie. */
+/** Mixes up to 4 sounds, each with its own level, into a single output. */
 export const mixer: ModuleDef = {
     type: "mixer",
-    label: "Mixeur",
+    label: "Mixer",
     icon: "≡",
     category: "effect",
-    // Prises placées sur la ligne de chaque voie, à côté de son curseur.
+    // Sockets placed on each channel's row, next to its slider.
     inputs: Array.from({ length: MIXER_CHANNELS }, (_, i) => ({
         id: channelInput(i),
         kind: "audio" as const,
-        label: `Voie ${i + 1}`,
+        label: `Channel ${i + 1}`,
         inline: true,
     })),
     outputs: [{ id: "out", kind: "audio" }],

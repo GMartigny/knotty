@@ -1,7 +1,7 @@
 import { useEffect, type RefObject } from "react";
 import { engine } from "./engine";
 
-/** Éléments à animer, par module source. Une seule boucle met à jour la variable CSS --level. */
+/** Elements to animate, per source module. A single loop updates the --level CSS variable. */
 const watchers = new Map<Element, string>();
 let frame = 0;
 

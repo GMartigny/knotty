@@ -18,33 +18,33 @@ type LiveCable =
           from: Tone.ToneAudioNode;
           target: string;
           paramId: string;
-          /** Modulation en temps réel : signal × profondeur → paramètre audio. */
+          /** Real-time modulation: signal × depth → audio parameter. */
           scaler?: Tone.Multiply;
           depth?(base: number): number;
-          /** Modulation lue ponctuellement : valeur instantanée du signal. */
+          /** Modulation read on demand: instantaneous signal value. */
           meter?: Tone.DCMeter;
       };
 
-/** Durée de la lueur d'un câble trigger après une impulsion, en ms. */
+/** How long a trigger cable glows after a pulse, in ms. */
 const PULSE_MS = 180;
 
 /**
- * Traduit le graphe du store en graphe audio Tone.js.
- * Le store est la seule source de vérité : le moteur ne fait qu'appliquer les différences.
+ * Translates the store graph into a Tone.js audio graph.
+ * The store is the single source of truth: the engine only applies the differences.
  */
 class AudioEngine {
     private modules = new Map<string, LiveModule>();
     private cables = new Map<string, LiveCable>();
-    /** Nombre de câbles trigger par entrée (`nodeId:port`). */
+    /** Number of trigger cables per input (`nodeId:port`). */
     private triggerInputs = new Map<string, number>();
-    /** Dernière impulsion visuelle par câble trigger. */
+    /** Last visual pulse per trigger cable. */
     private pulses = new Map<string, number>();
-    /** Modulations lues ponctuellement, par réglage (`nodeId:paramId`) : plusieurs câbles s'additionnent. */
+    /** On-demand modulations, per setting (`nodeId:paramId`): several cables add up. */
     private sampled = new Map<string, Set<Tone.DCMeter>>();
     private running = false;
 
     constructor() {
-        // Horloge des séquenceurs créée tout de suite, transport arrêté et tempo stable.
+        // Sequencer clock created right away, while the transport is stopped and the tempo stable.
         startClock();
         const { nodes, edges } = useGraph.getState();
         this.sync(nodes, edges);
@@ -65,8 +65,8 @@ class AudioEngine {
     }
 
     /**
-     * Intensité entre 0 et 1 pour les animations :
-     * niveau de sortie d'un module, ou lueur d'un câble trigger après une impulsion.
+     * Intensity between 0 and 1 for animations:
+     * a module's output level, or a trigger cable's glow after a pulse.
      */
     level(key: string): number {
         if (!this.running) return 0;
@@ -80,18 +80,18 @@ class AudioEngine {
         return Math.max(0, 1 - (performance.now() - pulse) / PULSE_MS);
     }
 
-    /** Échantillons récents du signal d'un module, ou `undefined` tant que le son n'est pas lancé. */
+    /** Recent signal samples of a module, or `undefined` until sound is started. */
     scope(nodeId: string): Float32Array | undefined {
         if (!this.running) return undefined;
         return this.modules.get(nodeId)?.instance.scope?.();
     }
 
-    /** Action jouée depuis l'interface (ex. une touche cliquée) ; sans effet tant que le son n'est pas lancé. */
+    /** Action played from the UI (e.g. a clicked key); no effect until sound is started. */
     play(nodeId: string, value: number) {
         if (this.running) this.modules.get(nodeId)?.instance.play?.(value);
     }
 
-    /** Fréquence jouée par un module, si elle est connue. */
+    /** Frequency played by a module, if known. */
     pitch(nodeId: string): number | undefined {
         return this.modules.get(nodeId)?.instance.pitch?.();
     }
@@ -100,31 +100,31 @@ class AudioEngine {
         return Tone.getContext().sampleRate;
     }
 
-    /** Horloge audio, en secondes : la référence pour savoir quels échantillons sont nouveaux. */
+    /** Audio clock, in seconds: the reference for knowing which samples are new. */
     get audioTime() {
         return Tone.getContext().currentTime;
     }
 
-    /** État affichable d'un module (ex. pas courant du séquenceur), -1 si aucun. */
+    /** Displayable state of a module (e.g. current sequencer step), -1 if none. */
     position(nodeId: string): number {
         if (!this.running) return -1;
         return this.modules.get(nodeId)?.instance.position?.() ?? -1;
     }
 
     private sync(allNodes: ModuleNode[], allEdges: CableEdge[]) {
-        // Un bloc ou un câble en train de tomber est déjà retiré pour l'audio.
+        // A block or cable that is falling is already removed as far as audio is concerned.
         const nodes = allNodes.filter((n) => !n.data.removing);
         const edges = allEdges.filter((e) => !e.data?.dropping);
         const nodeIds = new Set(nodes.map((n) => n.id));
         const edgeIds = new Set(edges.map((e) => e.id));
 
-        // 1. Câbles supprimés (avant les modules, pour déconnecter proprement).
+        // 1. Removed cables (before modules, to disconnect cleanly).
         for (const [id, c] of this.cables) {
             if (edgeIds.has(id)) continue;
             this.unplug(id, c);
         }
 
-        // 2. Modules supprimés.
+        // 2. Removed modules.
         for (const [id, m] of this.modules) {
             if (nodeIds.has(id)) continue;
             m.meter.dispose();
@@ -132,7 +132,7 @@ class AudioEngine {
             this.modules.delete(id);
         }
 
-        // 3. Modules ajoutés ou paramètres modifiés.
+        // 3. Added modules or changed parameters.
         for (const node of nodes) {
             const live = this.modules.get(node.id);
             if (!live) {
@@ -143,7 +143,7 @@ class AudioEngine {
             for (const [key, value] of Object.entries(node.data.params)) {
                 if (live.params[key] === value) continue;
                 live.instance.setParam(key, value);
-                // La profondeur de modulation suit le curseur (ex. ±100 % de la fréquence choisie).
+                // Modulation depth follows the slider (e.g. ±100% of the chosen frequency).
                 for (const c of this.cables.values()) {
                     if (c.kind === "mod" && c.target === node.id && c.paramId === key && c.scaler && c.depth) {
                         c.scaler.factor.rampTo(c.depth(value) / SOURCE_LEVEL, 0.05);
@@ -153,7 +153,7 @@ class AudioEngine {
             live.params = node.data.params;
         }
 
-        // 4. Câbles ajoutés.
+        // 4. Added cables.
         for (const edge of edges) {
             if (!this.cables.has(edge.id)) this.plug(edge);
         }
@@ -199,7 +199,7 @@ class AudioEngine {
         const base = this.modules.get(edge.target)?.params[paramId] ?? 0;
         const target = dst.modTarget?.(paramId);
         if (target) {
-            // Le signal est ramené à ±1 : une source à son niveau normal parcourt toute la profondeur.
+            // The signal is normalized to ±1: a source at its normal level sweeps the full depth.
             const scaler = new Tone.Multiply(target.depth(base) / SOURCE_LEVEL);
             from.connect(scaler);
             scaler.connect(target.param);
@@ -252,7 +252,7 @@ class AudioEngine {
             try {
                 if (sink) cable.from.disconnect(sink);
             } catch {
-                // déjà déconnecté par la destruction d'un module
+                // already disconnected when a module was disposed
             }
             cable.scaler?.dispose();
             if (cable.meter) {
@@ -265,7 +265,7 @@ class AudioEngine {
         try {
             cable.from.disconnect(cable.to);
         } catch {
-            // déjà déconnecté par la destruction d'un module
+            // already disconnected when a module was disposed
         }
     }
 

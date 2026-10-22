@@ -1,6 +1,6 @@
 /**
- * Corde Verlet : une suite de points reliés par des contraintes de distance,
- * soumis à la gravité, dont les deux extrémités sont épinglées aux ports.
+ * Verlet rope: a chain of points linked by distance constraints,
+ * subject to gravity, with both ends pinned to the sockets.
  */
 
 export interface Vec {
@@ -9,19 +9,19 @@ export interface Vec {
 }
 
 export const ROPE = {
-    /** Espacement visé entre deux points, en px. Plus serré = extrémités plus souples près des prises. */
+    /** Target spacing between two points, in px. Tighter = softer ends near the sockets. */
     spacing: 16,
     minPoints: 8,
     maxPoints: 40,
-    /** Longueur de câble par rapport à la distance entre ports (> 1 = le câble pend). */
+    /** Cable length relative to the distance between sockets (> 1 = the cable sags). */
     slack: 1.12,
-    /** Mou minimum en px, pour que les câbles courts pendent un peu aussi. */
+    /** Minimum slack in px, so short cables sag a little too. */
     minSlack: 24,
     gravity: 1400,
-    /** Amortissement de la vitesse à chaque pas (1 = aucun frottement). */
+    /** Velocity damping at each step (1 = no friction). */
     damping: 0.97,
     iterations: 10,
-    /** En dessous de ce déplacement par pas (px), la corde est considérée immobile. */
+    /** Below this displacement per step (px), the rope is considered still. */
     sleepThreshold: 0.03,
 };
 
@@ -29,8 +29,8 @@ const pointCountFor = (distance: number) =>
     Math.max(ROPE.minPoints, Math.min(ROPE.maxPoints, Math.round(distance / ROPE.spacing) + 1));
 
 /**
- * Rééchantillonne une polyligne en `count` points répartis selon la longueur d'arc,
- * et interpole au même endroit une valeur attachée à chaque point (ici la vitesse).
+ * Resamples a polyline into `count` points spread along its arc length,
+ * and interpolates a value attached to each point (here the velocity) at the same place.
  */
 const resampleWith = (points: Vec[], values: Vec[], count: number) => {
     const lengths = [0];
@@ -62,15 +62,15 @@ export class Rope {
     private calmFrames = 0;
     private pinA = true;
     private pinB = true;
-    /** Longueur de segment figée une fois le câble débranché. */
+    /** Segment length frozen once the cable is unplugged. */
     private frozenSegment?: number;
 
     constructor(a: Vec, b: Vec) {
         this.a = { ...a };
         this.b = { ...b };
         const count = pointCountFor(Math.hypot(b.x - a.x, b.y - a.y));
-        // Départ en ligne droite : la gravité fait tomber le câble dès les premières frames,
-        // ce qui donne un petit rebond à chaque branchement.
+        // Start as a straight line: gravity makes the cable drop in the first frames,
+        // which gives a little bounce every time a cable is plugged in.
         for (let i = 0; i < count; i++) {
             const t = i / (count - 1);
             const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
@@ -83,29 +83,29 @@ export class Rope {
         return this.awake;
     }
 
-    /** Met à jour les extrémités ; réveille la corde si elles ont bougé. */
+    /** Updates the ends; wakes the rope up if they moved. */
     setAnchors(a: Vec, b: Vec) {
         if (a.x === this.a.x && a.y === this.a.y && b.x === this.b.x && b.y === this.b.y) return;
         this.a = { ...a };
         this.b = { ...b };
         this.awake = true;
         this.calmFrames = 0;
-        // Un câble débranché garde sa résolution : il ne fait que tomber.
+        // An unplugged cable keeps its resolution: it just falls.
         if (this.frozenSegment === undefined) this.adaptResolution();
     }
 
-    /** Ajuste le nombre de points à la longueur du câble. */
+    /** Adjusts the number of points to the cable length. */
     private adaptResolution() {
         const wanted = pointCountFor(Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y));
-        // Hystérésis : on ne rééchantillonne pas pour un écart d'un seul point,
-        // sinon un déplacement autour d'un seuil provoque des rééchantillonnages en rafale.
+        // Hysteresis: don't resample for a difference of a single point,
+        // otherwise moving around a threshold triggers bursts of resampling.
         const current = this.points.length;
         const atBound = wanted === ROPE.minPoints || wanted === ROPE.maxPoints;
         if (wanted === current || (Math.abs(wanted - current) < 2 && !atBound)) return;
 
-        // La vitesse est rééchantillonnée le long de la *même* courbe que les positions :
-        // rééchantillonner `prev` séparément créait une fausse vitesse qui projetait
-        // les premiers points du câble dans la direction du mouvement.
+        // Velocity is resampled along the *same* curve as the positions:
+        // resampling `prev` separately created a fake velocity that flung
+        // the cable's first points in the direction of movement.
         const velocities = this.points.map((p, i) => ({ x: p.x - this.prev[i].x, y: p.y - this.prev[i].y }));
         const { points, values } = resampleWith(this.points, velocities, wanted);
         this.points = points;
@@ -113,8 +113,8 @@ export class Rope {
     }
 
     /**
-     * Débranche une extrémité : elle n'est plus épinglée à sa prise et tombe avec la gravité.
-     * La longueur du câble est figée à ce moment-là.
+     * Unplugs one end: it is no longer pinned to its socket and falls with gravity.
+     * The cable length is frozen at that moment.
      */
     release(end: "a" | "b") {
         if (end === "a") this.pinA = false;
@@ -122,7 +122,7 @@ export class Rope {
         this.frozenSegment ??= this.restSegment();
         this.awake = true;
         this.calmFrames = 0;
-        // Petite secousse vers le haut pour l'effet « on arrache la prise ».
+        // Small upward jolt for the "yanking the plug" effect.
         const i = end === "a" ? 0 : this.points.length - 1;
         this.prev[i].y = this.points[i].y + 6;
     }
@@ -141,7 +141,7 @@ export class Rope {
         let motion = 0;
         const free = (i: number) => (i === 0 ? !pinA : i === n - 1 ? !pinB : true);
 
-        // Intégration de Verlet sur les points libres.
+        // Verlet integration on the free points.
         for (let i = 0; i < n; i++) {
             if (!free(i)) continue;
             const p = points[i];
@@ -153,7 +153,7 @@ export class Rope {
             p.y += vy + g;
         }
 
-        // Contraintes de distance, extrémités épinglées à leurs prises.
+        // Distance constraints, ends pinned to their sockets.
         const segment = this.frozenSegment ?? this.restSegment();
         for (let k = 0; k < ROPE.iterations; k++) {
             if (pinA) {
@@ -164,8 +164,8 @@ export class Rope {
                 points[n - 1].x = this.b.x;
                 points[n - 1].y = this.b.y;
             }
-            // Sens alterné à chaque passe : sinon les corrections partent toujours
-            // de la source et ce côté du câble suit le mouvement plus que l'autre.
+            // Alternate direction on each pass: otherwise corrections always start
+            // from the source and that side of the cable follows movement more than the other.
             const forward = k % 2 === 0;
             for (let j = 0; j < n - 1; j++) {
                 const i = forward ? j : n - 2 - j;
@@ -189,7 +189,7 @@ export class Rope {
         if (pinA) prev[0] = { ...points[0] };
         if (pinB) prev[n - 1] = { ...points[n - 1] };
 
-        // Déplacement réel sur ce pas, après contraintes.
+        // Actual displacement on this step, after constraints.
         for (let i = 0; i < n; i++) {
             if (!free(i)) continue;
             motion = Math.max(motion, Math.abs(points[i].x - prev[i].x) + Math.abs(points[i].y - prev[i].y));
@@ -198,7 +198,7 @@ export class Rope {
         if (this.calmFrames > 20) this.awake = false;
     }
 
-    /** Chemin SVG lissé (Catmull-Rom → Bézier cubiques). */
+    /** Smoothed SVG path (Catmull-Rom → cubic Béziers). */
     toPath(): string {
         const p = this.points;
         let d = `M ${p[0].x.toFixed(1)} ${p[0].y.toFixed(1)}`;

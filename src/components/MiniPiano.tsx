@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { engine } from "../audio/engine";
 import { BLACK, KEY_CODES, NOTE_NAMES } from "../modules/keyboard";
 
-/** Lettre affichée sur chaque touche, selon la disposition réelle du clavier (AZERTY, QWERTY…). */
+/** Letter shown on each key, following the actual keyboard layout (QWERTY, AZERTY…). */
 function useKeyLabels() {
     const [labels, setLabels] = useState(() => KEY_CODES.map((c) => c.replace("Key", "")));
     useEffect(() => {
@@ -14,7 +14,7 @@ function useKeyLabels() {
     return labels;
 }
 
-/** Touches enfoncées au clavier, relues à chaque image. */
+/** Keys held on the keyboard, read on every frame. */
 function useHeld(nodeId: string) {
     const [held, setHeld] = useState(0);
     useEffect(() => {
@@ -29,7 +29,7 @@ function useHeld(nodeId: string) {
     return held;
 }
 
-/** Mini-piano d'une octave : chaque touche affiche la lettre du clavier qui la joue, et se clique. */
+/** One-octave mini-piano: each key shows the keyboard letter that plays it, and can be clicked. */
 export function MiniPiano({ nodeId }: { nodeId: string }) {
     const labels = useKeyLabels();
     const held = useHeld(nodeId);
@@ -41,7 +41,7 @@ export function MiniPiano({ nodeId }: { nodeId: string }) {
             key={i}
             type="button"
             className={`piano-key nodrag ${BLACK.has(i) ? "is-black" : "is-white"} ${held & (1 << i) || clicked === i ? "is-down" : ""}`}
-            aria-label={`${NOTE_NAMES[i]} (touche ${labels[i]})`}
+            aria-label={`${NOTE_NAMES[i]} (key ${labels[i]})`}
             onPointerDown={(e) => {
                 e.stopPropagation();
                 setClicked(i);
@@ -57,7 +57,7 @@ export function MiniPiano({ nodeId }: { nodeId: string }) {
     return (
         <div className="piano" role="group" aria-label="Mini-piano">
             <div className="piano-whites">{whites.map(key)}</div>
-            {/* Touches noires posées entre les blanches : position calculée sur l'indice de la blanche précédente. */}
+            {/* Black keys sit between the white ones: position computed from the previous white key's index. */}
             <div className="piano-blacks">
                 {[...BLACK].map((i) => {
                     const before = whites.filter((w) => w < i).length;

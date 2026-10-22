@@ -1,4 +1,4 @@
-/* Knotty — un tapis de jeu indigo, des blocs-jouets crème cerclés d'encre, des câbles en caoutchouc. */
+/* Knotty — an indigo play mat, cream toy blocks outlined in ink, rubber cables. */
 
 :root {
     --mat: #2b2d5c;
@@ -120,7 +120,7 @@ button {
     opacity: 0.5;
 }
 
-/* Bloc qui suit le pointeur pendant le glisser depuis la palette. */
+/* Block following the pointer while dragging from the palette. */
 .drag-ghost {
     position: fixed;
     z-index: 100;
@@ -150,7 +150,7 @@ button {
     line-height: 1;
 }
 
-/* ——— Tapis ——— */
+/* ——— Mat ——— */
 
 .mat {
     position: relative;
@@ -161,7 +161,7 @@ button {
     cursor: default;
 }
 
-/* ——— Blocs ——— */
+/* ——— Blocks ——— */
 
 .block {
     --level: 0;
@@ -182,7 +182,7 @@ button {
     box-shadow: 0 14px 0 rgba(26, 27, 58, 0.55);
 }
 
-/* Bloc supprimé : il tombe en basculant puis s'efface, comme les câbles débranchés. */
+/* Removed block: it tips over as it falls, then fades out, like unplugged cables. */
 .block.is-removing {
     pointer-events: none;
     animation: block-fall 0.7s cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
@@ -220,7 +220,7 @@ button {
     border-radius: 17px 17px 0 0;
 }
 
-/* Bloc réduit à son en-tête. */
+/* Block reduced to its header. */
 .block.is-compact .block-head {
     border-bottom: 0;
     border-radius: 17px;
@@ -267,7 +267,7 @@ button {
     gap: 10px;
 }
 
-/* ——— Réglages ——— */
+/* ——— Settings ——— */
 
 .param {
     display: grid;
@@ -352,7 +352,7 @@ button {
     background: var(--accent);
 }
 
-/* ——— Enveloppe ——— */
+/* ——— Envelope ——— */
 
 .env-shape {
     display: block;
@@ -383,7 +383,7 @@ button {
     stroke-linejoin: round;
 }
 
-/* ——— Séquenceur ——— */
+/* ——— Sequencer ——— */
 
 .block-sequencer {
     width: auto;
@@ -400,7 +400,7 @@ button {
     display: flex;
     align-items: center;
     gap: 8px;
-    /* La ligne va jusqu'au bord du bloc pour que sa prise s'y accroche. */
+    /* The row reaches the block's edge so its socket can hang on it. */
     margin-right: -14px;
     padding-right: 14px;
 }
@@ -434,7 +434,7 @@ button {
     transition: transform 0.06s;
 }
 
-/* Un temps sur deux légèrement plus foncé. */
+/* Every other beat slightly darker. */
 :where(.seq-beat:nth-child(odd)) .seq-step {
     background: #e9d8b8;
 }
@@ -458,12 +458,12 @@ button {
     transform: translateY(-2px);
 }
 
-/* ——— Prises ——— */
+/* ——— Sockets ——— */
 
 /*
- * Code couleur : le cœur d'une prise dit quel signal y passe (orange = son, jaune = déclencheur).
- * L'anneau dit son rôle : crème pour une entrée/sortie, bleu ciel pour la prise de réglage d'un curseur,
- * qui accepte le son (cœur orange).
+ * Color code: a socket's core tells which signal flows through it (orange = sound, yellow = trigger).
+ * The ring tells its role: cream for an input/output, sky blue for a slider's setting socket,
+ * which accepts sound (orange core).
  */
 
 .react-flow__handle.socket {
@@ -522,7 +522,7 @@ button {
     --s: 1.35;
 }
 
-/* Pendant un tirage : les prises compatibles s'allument, les autres s'effacent. */
+/* While pulling: compatible sockets light up, the others fade. */
 .mat[data-grab] .react-flow__handle.socket {
     opacity: 0.25;
 }
@@ -544,7 +544,7 @@ button {
     --s: 1.15;
 }
 
-/* ——— Lignes de prises et légende ——— */
+/* ——— Socket rows and legend ——— */
 
 .port-rows {
     display: grid;
@@ -554,7 +554,7 @@ button {
 .port-row,
 .param.has-port {
     position: relative;
-    /* La ligne va jusqu'au bord du bloc pour que sa prise s'y accroche. */
+    /* The row reaches the block's edge so its socket can hang on it. */
     margin-left: -14px;
     padding-left: 14px;
 }
@@ -630,7 +630,7 @@ button {
     border-color: var(--mod-ring);
 }
 
-/* ——— Câbles ——— */
+/* ——— Cables ——— */
 
 .cable {
     --level: 0;
@@ -692,7 +692,7 @@ button {
     stroke-dasharray: 2 10;
 }
 
-/* ——— Interrupteur de la Sortie ——— */
+/* ——— Output switch ——— */
 
 .toggle {
     position: relative;
@@ -726,7 +726,7 @@ button {
     transform: translateX(20px);
 }
 
-/* Sortie coupée : le bloc s'éteint. */
+/* Muted output: the block goes dark. */
 .block.is-off .block-head {
     background: color-mix(in srgb, var(--accent) 35%, var(--cream-shade));
 }
@@ -735,7 +735,7 @@ button {
     opacity: 0.6;
 }
 
-/* ——— Tapis vide ——— */
+/* ——— Empty mat ——— */
 
 .empty-mat {
     position: absolute;
@@ -854,7 +854,7 @@ button {
     box-shadow: 0 1px 0 var(--ink);
 }
 
-/* ——— Tout effacer ——— */
+/* ——— Clear all ——— */
 
 .clear-button {
     position: absolute;
@@ -914,7 +914,7 @@ button {
     }
 }
 
-/* ——— Démarrage ——— */
+/* ——— Start ——— */
 
 .start {
     position: absolute;
@@ -972,7 +972,7 @@ button {
     }
 }
 
-/* ——— Clavier ——— */
+/* ——— Keyboard ——— */
 
 .piano {
     --white-w: 22px;
@@ -1013,7 +1013,7 @@ button {
     pointer-events: none;
 }
 
-/* Une touche noire est centrée sur la jointure entre deux blanches. */
+/* A black key is centered on the seam between two white ones. */
 .piano-black-slot {
     position: absolute;
     top: 0;
@@ -1038,7 +1038,7 @@ button {
     box-shadow: none;
 }
 
-/* ——— Gamme ——— */
+/* ——— Scale ——— */
 
 .note-display {
     display: grid;
@@ -1074,7 +1074,7 @@ button {
     }
 }
 
-/* ——— Courbe du Filtre ——— */
+/* ——— Filter curve ——— */
 
 .filter-curve {
     display: block;
@@ -1097,7 +1097,7 @@ button {
     stroke-dasharray: 3 3;
 }
 
-/* ——— Commentaire : cadre de texte redimensionnable, derrière les blocs ——— */
+/* ——— Comment: resizable text frame, behind the blocks ——— */
 
 .comment {
     width: 100%;
@@ -1157,11 +1157,17 @@ button {
     background: rgba(26, 27, 58, 0.35);
 }
 
+.comment .block-remove {
+    flex: none;
+    /* The header text is cream: the cross keeps the block's ink color. */
+    color: var(--ink);
+}
+
 .comment:hover .block-remove {
     opacity: 1;
 }
 
-/* Poignées de redimensionnement : discrètes, visibles au survol ou à la sélection. */
+/* Resize handles: discreet, visible on hover or when selected. */
 .react-flow__resize-control.comment-line {
     border-color: transparent;
 }

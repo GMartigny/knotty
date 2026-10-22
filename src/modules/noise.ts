@@ -3,17 +3,17 @@ import { SOURCE_DB, type ModuleDef } from "./types";
 
 const COLORS = ["white", "pink", "brown"] as const;
 
-/** Bruit continu. Pour le découper en coups, le faire passer dans une Enveloppe. */
+/** Continuous noise. To cut it into hits, run it through an Envelope. */
 export const noise: ModuleDef = {
     type: "noise",
-    label: "Bruit",
+    label: "Noise",
     icon: "≈",
     category: "source",
     inputs: [],
     outputs: [{ id: "out", kind: "audio" }],
-    params: [{ id: "color", label: "Couleur", min: 0, max: 2, default: 1, options: ["Blanc", "Rose", "Brun"] }],
+    params: [{ id: "color", label: "Color", min: 0, max: 2, default: 1, options: ["White", "Pink", "Brown"] }],
     create(values) {
-        // Niveau fixe : le volume se règle avec un bloc Volume.
+        // Fixed level: loudness is set with a Volume block.
         const source = new Tone.Noise({ type: COLORS[values.color] ?? "pink", volume: SOURCE_DB });
         return {
             input: () => undefined,

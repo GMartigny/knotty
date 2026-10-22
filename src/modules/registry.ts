@@ -14,7 +14,7 @@ import { distortion } from "./distortion";
 import { scale } from "./scale";
 import { comment } from "./comment";
 
-/** Ajouter un module = l'importer ici. */
+/** Adding a module = importing it here. */
 const modules: ModuleDef[] = [sequencer, keyboard, scale, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output, comment];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
@@ -43,5 +43,5 @@ export const portKind = (type: string, portId: string, side: "in" | "out"): Port
     return ports.find((p) => p.id === portId)?.kind;
 };
 
-/** Une sortie peut-elle se brancher sur une entrée ? L'audio sert aussi de signal de modulation. */
+/** Can an output plug into an input? Audio also works as a modulation signal. */
 export const compatible = (out: PortKind, into: PortKind) => out === into || (out === "audio" && into === "mod");

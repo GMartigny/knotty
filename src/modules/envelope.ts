@@ -2,31 +2,31 @@ import * as Tone from "tone";
 import { ModReader, type ModuleDef } from "./types";
 
 /**
- * Enveloppe ADSR : façonne le volume du son qui la traverse à chaque déclenchement.
- * Sans câble sur « Déclencheur », elle laisse passer le son tel quel.
+ * ADSR envelope: shapes the volume of the sound going through it on each trigger.
+ * With no cable on "Trigger", it lets the sound through unchanged.
  */
 export const envelope: ModuleDef = {
     type: "envelope",
-    label: "Enveloppe",
+    label: "Envelope",
     icon: "⋀",
     category: "effect",
-    idleHint: { port: "gate", text: "Branche un Déclencheur pour découper le son en notes." },
+    idleHint: { port: "gate", text: "Plug in a Trigger to cut the sound into notes." },
     inputs: [
-        { id: "in", kind: "audio", label: "Entrée" },
-        { id: "gate", kind: "trigger", label: "Déclencheur" },
+        { id: "in", kind: "audio", label: "Input" },
+        { id: "gate", kind: "trigger", label: "Trigger" },
     ],
     outputs: [{ id: "out", kind: "audio" }],
     params: [
-        { id: "attack", label: "Attaque", min: 0.001, max: 2, default: 0.01, scale: "log", step: 0.001, unit: "s" },
-        { id: "decay", label: "Déclin", min: 0.01, max: 2, default: 0.2, scale: "log", step: 0.01, unit: "s" },
-        { id: "sustain", label: "Maintien", min: 0, max: 1, default: 0.5, step: 0.01 },
-        { id: "hold", label: "Durée tenue", min: 0.01, max: 2, default: 0.15, scale: "log", step: 0.01, unit: "s" },
-        { id: "release", label: "Relâchement", min: 0.01, max: 4, default: 0.4, scale: "log", step: 0.01, unit: "s" },
+        { id: "attack", label: "Attack", min: 0.001, max: 2, default: 0.01, scale: "log", step: 0.001, unit: "s" },
+        { id: "decay", label: "Decay", min: 0.01, max: 2, default: 0.2, scale: "log", step: 0.01, unit: "s" },
+        { id: "sustain", label: "Sustain", min: 0, max: 1, default: 0.5, step: 0.01 },
+        { id: "hold", label: "Hold", min: 0.01, max: 2, default: 0.15, scale: "log", step: 0.01, unit: "s" },
+        { id: "release", label: "Release", min: 0.01, max: 4, default: 0.4, scale: "log", step: 0.01, unit: "s" },
     ],
     create(params) {
         const input = new Tone.Gain(1);
         const out = new Tone.Gain(1);
-        // Chemin direct, coupé dès qu'un câble trigger pilote l'enveloppe.
+        // Direct path, cut as soon as a trigger cable drives the envelope.
         const open = new Tone.Gain(1).connect(out);
         const env = new Tone.AmplitudeEnvelope({
             attack: params.attack,
@@ -35,7 +35,7 @@ export const envelope: ModuleDef = {
             release: params.release,
         }).connect(out);
         input.fan(open, env);
-        // Valeurs des curseurs ; la modulation éventuelle est appliquée à chaque déclenchement.
+        // Slider values; any modulation is applied on each trigger.
         const base = { ...params };
         const mods = new ModReader(envelope.params);
 
@@ -51,7 +51,7 @@ export const envelope: ModuleDef = {
                 env.decay = v("decay");
                 env.sustain = v("sustain");
                 env.release = v("release");
-                // La note est tenue le temps de l'attaque, du déclin et de « Durée tenue », puis relâchée.
+                // The note is held for the attack, decay and "Hold" times, then released.
                 env.triggerAttackRelease(Number(env.attack) + Number(env.decay) + v("hold"), time);
             },
             setTriggerConnected: (_port, connected) => open.gain.rampTo(connected ? 0 : 1, 0.03),

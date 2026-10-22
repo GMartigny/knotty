@@ -1,30 +1,30 @@
-# knotty — notes pour les agents
+# knotty — notes for agents
 
-Vite + React 19 + TypeScript, React Flow (`@xyflow/react`), Tone.js, Zustand. Interface, commentaires de code et messages de commit en français.
+Vite + React 19 + TypeScript, React Flow (`@xyflow/react`), Tone.js, Zustand. UI, code comments, docs and commit messages are in English.
 
 ## Architecture
 
-- **`src/store/graph.ts`** : le graphe (blocs, câbles, réglages) dans un store Zustand. C'est la seule source de vérité.
-- **`src/audio/engine.ts`** : s'abonne au store et applique les différences au graphe Tone.js (création, `connect`, `disconnect`, `dispose`). Un bloc `removing` ou un câble `dropping` (en train de tomber) est déjà considéré comme retiré.
-- **`src/audio/clock.ts`** : horloge commune à la double croche (`onSixteenth`), partagée par les séquenceurs et l'Écho, pour qu'ils restent calés et démarrent sans délai.
-- **`src/modules/`** : un fichier par type de bloc (`ModuleDef` : ports, réglages, création des nœuds Tone). Ajouter un bloc = un fichier + une ligne dans `registry.ts`.
-- **`src/cables/`** : câbles en corde Verlet. Le nombre de points dépend de la longueur (un tous les ~16 px, entre 8 et 40, pour que les extrémités restent souples). Une seule boucle `requestAnimationFrame` anime tous les câbles et s'arrête quand tout est immobile ; les chemins SVG sont écrits directement dans le DOM, sans re-render React.
-- **`src/store/persist.ts`** : le patch (blocs, positions, réglages, câbles, texte et taille des Commentaires) est enregistré dans le `localStorage` 300 ms après chaque modification et restauré à l'ouverture. Au chargement, il est nettoyé pour la version actuelle : blocs inconnus ignorés, réglages complétés par leurs valeurs par défaut, câbles vers des prises disparues retirés.
-- **`src/store/example.ts`** : les modèles (Doux, Groove, Métal). Les blocs d'un modèle ne doivent pas se chevaucher.
-- **`src/audio/levels.ts`** : niveau de sortie de chaque bloc, exposé en variable CSS `--level` pour les lueurs.
+- **`src/store/graph.ts`**: the graph (blocks, cables, settings) in a Zustand store. It is the single source of truth.
+- **`src/audio/engine.ts`**: subscribes to the store and applies the differences to the Tone.js graph (create, `connect`, `disconnect`, `dispose`). A `removing` block or a `dropping` cable (falling) is already treated as removed.
+- **`src/audio/clock.ts`**: a shared sixteenth-note clock (`onSixteenth`), used by the sequencers and the Echo so they stay in sync and start without delay.
+- **`src/modules/`**: one file per block type (`ModuleDef`: sockets, settings, creation of the Tone nodes). Adding a block = one file + one line in `registry.ts`.
+- **`src/cables/`**: Verlet rope cables. The number of points depends on the length (one every ~16 px, between 8 and 40, so the ends stay supple). A single `requestAnimationFrame` loop animates all cables and stops when everything is still; SVG paths are written directly to the DOM, without React re-renders.
+- **`src/store/persist.ts`**: the patch (blocks, positions, settings, cables, Comment text and size) is saved to `localStorage` 300 ms after each change and restored on load. On load it is cleaned up for the current version: unknown blocks ignored, settings filled with their defaults, cables to missing sockets removed.
+- **`src/store/example.ts`**: the presets (Soft, Groove, Metal). Blocks in a preset must not overlap, and each block must sit fully inside its Comment frame, below the frame's header.
+- **`src/audio/levels.ts`**: each block's output level, exposed as the `--level` CSS variable for the glows.
 
-## Câbles et signaux
+## Cables and signals
 
-Les prises sont typées `audio`, `trigger` ou `mod` ; les connexions incompatibles et les boucles sont refusées. Un son peut aussi se brancher sur une prise `mod`.
+Sockets are typed `audio`, `trigger` or `mod`; incompatible connections and loops are refused. A sound can also plug into a `mod` socket.
 
-Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion, et éventuellement une note (fréquence). Comme dans un vrai modulaire, les sources (Oscillateur, Bruit) sonnent en continu au niveau `SOURCE_DB` (−12 dB) ; c'est l'Enveloppe qui les découpe en notes. Sans Déclencheur branché, l'Enveloppe laisse passer le son tel quel.
+A trigger cable carries no sound: the engine subscribes the input (`trigger`) to the output (`listen`) and passes on the audio time of each pulse, and optionally a note (frequency). As in a real modular, sources (Oscillator, Noise) play continuously at `SOURCE_DB` (−12 dB); the Envelope cuts them into notes. With no Trigger plugged in, the Envelope lets the sound through unchanged.
 
-**Modulation** : chaque curseur continu a sa prise `mod:<réglage>`. Le signal s'ajoute à la position du curseur : ±moitié de la plage, ou ±100 % de la valeur sur une échelle log, pour une source à son niveau normal (`SOURCE_LEVEL`). Les paramètres audio sont modulés en temps réel (`modTarget`, via `DrivenParam` dans `src/modules/mod.ts`, car Tone.js remet un paramètre à zéro dès qu'on y branche un signal) ; les durées de l'Enveloppe sont lues à chaque déclenchement (`setModSource`). Un réglage marqué `modulatable: false` n'a pas de prise.
+**Modulation**: every continuous slider has a `mod:<setting>` socket. The signal is added to the slider position: ±half the range, or ±100% of the value on a log scale, for a source at its normal level (`SOURCE_LEVEL`). Audio parameters are modulated in real time (`modTarget`, via `DrivenParam` in `src/modules/mod.ts`, because Tone.js resets a parameter to zero as soon as a signal is connected to it); Envelope times are read on each trigger (`setModSource`). A setting marked `modulatable: false` has no socket.
 
-**Commentaire** : nœud `comment` sans son ni prise, rendu par `CommentBlock` derrière les blocs et les câbles (`zIndex: -1`, `elevateNodesOnSelect={false}`), redimensionnable avec `NodeResizer`.
+**Comment**: a `comment` node with no sound or sockets, rendered by `CommentBlock` behind blocks and cables (`zIndex: -1`, `elevateNodesOnSelect={false}`), resizable with `NodeResizer`.
 
-## Vérifier
+## Checking
 
-- `npm run build` (inclut `tsc -b`).
-- Tests manuels avec Playwright sur `vite preview` (port 4173) : niveaux via `--level`, chevauchements des blocs dans les modèles, absence d'erreur de page.
-- Déploiement automatique sur Vercel à chaque push sur `main`.
+- `npm run build` (includes `tsc -b`).
+- Manual Playwright tests on `vite preview` (port 4173): levels via `--level`, block overlaps and framing in the presets, no page errors.
+- Automatic Vercel deployment on every push to `main`.

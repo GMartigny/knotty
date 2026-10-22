@@ -1,8 +1,8 @@
 import type * as Tone from "tone";
 
 /**
- * Type de signal d'une prise.
- * `mod` : entrée de modulation d'un réglage ; elle accepte les câbles audio.
+ * Signal type of a socket.
+ * `mod`: modulation input of a setting; it accepts audio cables.
  */
 export type PortKind = "audio" | "trigger" | "mod";
 
@@ -10,11 +10,11 @@ export interface PortDef {
     id: string;
     kind: PortKind;
     label?: string;
-    /** La prise est placée par le corps personnalisé du bloc, pas automatiquement. */
+    /** The socket is placed by the block's custom body, not automatically. */
     inline?: boolean;
 }
 
-/** Déclenchement à l'heure audio `time`, avec éventuellement une note (fréquence en Hz). */
+/** Trigger at audio time `time`, optionally with a note (frequency in Hz). */
 export type TriggerListener = (time: number, note?: number) => void;
 
 export interface ParamDef {
@@ -24,16 +24,16 @@ export interface ParamDef {
     max: number;
     default: number;
     step?: number;
-    /** Échelle du curseur : logarithmique pour les fréquences. */
+    /** Slider scale: logarithmic for frequencies. */
     scale?: "lin" | "log";
     unit?: string;
-    /** Si défini, le paramètre est un choix : la valeur est l'index de l'option. */
+    /** If set, the parameter is a choice: the value is the option index. */
     options?: string[];
-    /** Paramètre stocké mais sans curseur (ex. motifs du séquenceur). */
+    /** Stored parameter without a slider (e.g. sequencer patterns). */
     hidden?: boolean;
-    /** `false` : pas de prise de modulation pour ce curseur. */
+    /** `false`: no modulation socket for this slider. */
     modulatable?: false;
-    /** Entrée son affichée sur la ligne de ce curseur (ex. une voie du Mixeur). */
+    /** Audio input shown on this slider's row (e.g. a Mixer channel). */
     inputPort?: string;
 }
 
@@ -41,40 +41,40 @@ export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "not
 
 export type ParamValues = Record<string, number>;
 
-/** Niveau de sortie des sources (−12 dB). Une modulation venue d'une source à ce niveau parcourt toute la plage. */
+/** Output level of sources (−12 dB). Modulation from a source at this level sweeps the whole range. */
 export const SOURCE_DB = -12;
 export const SOURCE_LEVEL = Math.pow(10, SOURCE_DB / 20);
 
-/** Préfixe des prises de modulation : `mod:frequency` module le réglage `frequency`. */
+/** Prefix of modulation sockets: `mod:frequency` modulates the `frequency` setting. */
 export const MOD_PREFIX = "mod:";
 export const modPort = (paramId: string) => `${MOD_PREFIX}${paramId}`;
 export const modParamOf = (portId: string) => (portId.startsWith(MOD_PREFIX) ? portId.slice(MOD_PREFIX.length) : undefined);
 
-/** Un curseur a une prise de modulation s'il est visible, continu et non exclu. */
+/** A slider has a modulation socket if it is visible, continuous and not excluded. */
 export const isModulatable = (p: ParamDef) => !p.hidden && !p.options && p.modulatable !== false;
 
 /**
- * Cible de modulation en temps réel : le signal entrant, multiplié par `depth(valeur du curseur)`,
- * s'ajoute à ce paramètre audio.
+ * Real-time modulation target: the incoming signal, multiplied by `depth(slider value)`,
+ * is added to this audio parameter.
  */
 export interface ModTarget {
     param: Tone.InputNode;
     depth(base: number): number;
 }
 
-/** Ampleur de modulation par défaut : ±moitié de la plage, ou ±100 % de la valeur sur une échelle log. */
+/** Default modulation depth: ±half the range, or ±100% of the value on a log scale. */
 export const defaultDepth = (p: ParamDef) => (base: number) => (p.scale === "log" ? base : (p.max - p.min) / 2);
 
 /**
- * Valeur effective d'un réglage modulé lu ponctuellement (ex. au déclenchement).
- * `m` est le signal de modulation, entre -1 et 1 : ±2 octaves en log, ±moitié de la plage sinon.
+ * Effective value of a modulated setting read at a given moment (e.g. on trigger).
+ * `m` is the modulation signal, between -1 and 1: ±2 octaves on a log scale, ±half the range otherwise.
  */
 export const applyMod = (p: ParamDef, base: number, m: number) => {
     const v = p.scale === "log" ? base * Math.pow(2, 2 * m) : base + (m * (p.max - p.min)) / 2;
     return Math.min(p.max, Math.max(p.min, v));
 };
 
-/** Sources de modulation lues ponctuellement, fournies par le moteur. */
+/** Modulation sources read on demand, provided by the engine. */
 export class ModReader {
     private sources = new Map<string, () => number>();
     constructor(private defs: ParamDef[]) {}
@@ -84,7 +84,7 @@ export class ModReader {
         else this.sources.delete(paramId);
     }
 
-    /** Valeur du réglage, modulée si une source est branchée. */
+    /** Setting value, modulated if a source is plugged in. */
     value(paramId: string, base: number) {
         const read = this.sources.get(paramId);
         const def = this.defs.find((d) => d.id === paramId);
@@ -94,37 +94,37 @@ export class ModReader {
     }
 }
 
-/** Instance audio vivante d'un module, créée par le moteur. */
+/** Live audio instance of a module, created by the engine. */
 export interface ModuleInstance {
     input(portId: string): Tone.InputNode | undefined;
     output(portId: string): Tone.ToneAudioNode | undefined;
     setParam(id: string, value: number): void;
-    /** Appelé quand le moteur démarre (ex. lancer une source). */
+    /** Called when the engine starts (e.g. to start a source). */
     start?(): void;
-    /** Sortie trigger : s'abonner aux déclenchements. Renvoie la fonction de désabonnement. */
+    /** Trigger output: subscribe to triggers. Returns the unsubscribe function. */
     listen?(portId: string, fn: TriggerListener): () => void;
-    /** Entrée trigger : reçoit un déclenchement à l'heure audio `time`, avec la note jouée s'il y en a une. */
+    /** Trigger input: receives a trigger at audio time `time`, with the played note if any. */
     trigger?(portId: string, time: number, note?: number): void;
-    /** Entrée trigger : indique si au moins un câble y est branché. */
+    /** Trigger input: tells whether at least one cable is plugged in. */
     setTriggerConnected?(portId: string, connected: boolean): void;
-    /** État affichable (ex. pas courant du séquenceur), lu par l'UI. */
+    /** Displayable state (e.g. current sequencer step), read by the UI. */
     position?(): number;
-    /** Derniers échantillons du signal, pour l'affichage de l'onde. */
+    /** Latest signal samples, for the waveform display. */
     scope?(): Float32Array;
-    /** Fréquence jouée en ce moment (elle peut venir d'une note plutôt que du curseur). */
+    /** Frequency currently playing (it may come from a note rather than the slider). */
     pitch?(): number;
-    /** Action jouée depuis l'interface (ex. une touche du mini-piano). */
+    /** Action played from the UI (e.g. a mini-piano key). */
     play?(value: number): void;
-    /** Modulation en temps réel d'un réglage, si ce réglage est un paramètre audio. */
+    /** Real-time modulation of a setting, if that setting is an audio parameter. */
     modTarget?(paramId: string): ModTarget | undefined;
-    /** Sinon, modulation lue ponctuellement : le moteur fournit une fonction qui renvoie le signal (-1…1). */
+    /** Otherwise, modulation read on demand: the engine provides a function returning the signal (-1…1). */
     setModSource?(paramId: string, read: (() => number) | null): void;
     dispose(): void;
 }
 
 export interface ModuleDef {
     type: string;
-    /** Indication affichée dans le bloc tant que rien n'est branché sur cette entrée. */
+    /** Hint shown in the block while nothing is plugged into this input. */
     idleHint?: { port: string; text: string };
     label: string;
     icon: string;

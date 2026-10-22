@@ -27,7 +27,7 @@ export function CableEdge({
     const shadow = useRef<SVGPathElement>(null);
     const hit = useRef<SVGPathElement>(null);
 
-    // Les positions arrivent par props ; la physique, elle, écrit directement dans le DOM.
+    // Positions come in through props; the physics writes directly to the DOM.
     useLayoutEffect(() => {
         const paths = [shadow.current, main.current, hit.current].filter(Boolean) as SVGPathElement[];
         const d = physics.upsert(id, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }, paths);
@@ -36,13 +36,13 @@ export function CableEdge({
 
     useEffect(() => () => physics.remove(id), [id]);
 
-    // Débranché : l'extrémité côté prise tirée se libère et tombe.
+    // Unplugged: the end on the pulled socket's side comes loose and falls.
     const dropping = data?.dropping;
     useEffect(() => {
         if (dropping) physics.release(id, dropping === "source" ? "a" : "b");
     }, [id, dropping]);
 
-    // Pendant qu'on tire depuis une prise déjà branchée, ses câbles s'estompent : lâcher dans le vide les débranche.
+    // While pulling from an already plugged socket, its cables fade: dropping in empty space unplugs them.
     const grabbed = useGraph((s) => {
         const g = s.grab;
         if (!g) return false;
@@ -51,8 +51,8 @@ export function CableEdge({
             : g.nodeId === target && g.handleId === (targetHandleId ?? "in");
     });
 
-    // Un câble audio s'illumine selon le niveau du module qui l'alimente,
-    // un câble trigger à chaque impulsion qu'il transporte.
+    // An audio cable lights up with the level of the module feeding it,
+    // a trigger cable with each pulse it carries.
     useLevel(data?.kind === "trigger" ? id : source, group);
 
     const color = KIND_COLOR[data?.kind ?? "audio"];

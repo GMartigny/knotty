@@ -2,11 +2,11 @@ import * as Tone from "tone";
 import { defaultDepth, type ModTarget, type ParamDef } from "./types";
 
 /**
- * Pilote un paramètre audio par un signal de base (la valeur du curseur).
+ * Drives an audio parameter with a base signal (the slider value).
  *
- * Dans Tone.js, brancher un signal sur un paramètre remet sa valeur propre à zéro :
- * le paramètre ne vaut plus que la somme de ce qui y est branché. On y branche donc
- * toujours ce signal de base, et la modulation vient s'y additionner.
+ * In Tone.js, connecting a signal to a parameter resets its own value to zero:
+ * the parameter becomes just the sum of what is connected to it. So this base signal
+ * is always connected, and modulation is added on top of it.
  */
 export class DrivenParam {
     readonly base: Tone.Signal;
@@ -25,8 +25,8 @@ export class DrivenParam {
     }
 
     /**
-     * Passage à une valeur à l'heure audio `time` (ex. une note jouée) : saut immédiat,
-     * ou glissement exponentiel (naturel pour une fréquence) sur `glide` secondes.
+     * Move to a value at audio time `time` (e.g. a played note): immediate jump,
+     * or exponential slide (natural for a frequency) over `glide` seconds.
      */
     jump(value: number, time: number, glide = 0) {
         if (glide <= 0) {
@@ -34,12 +34,12 @@ export class DrivenParam {
             this.base.setValueAtTime(value, time);
             return;
         }
-        // Repart de la valeur atteinte à cet instant, même si un glissement est en cours.
+        // Start from the value reached at that moment, even if a slide is in progress.
         this.base.cancelAndHoldAtTime(time);
         this.base.exponentialRampToValueAtTime(value, time + glide);
     }
 
-    /** Valeur de base en ce moment. */
+    /** Current base value. */
     get value() {
         return this.base.getValueAtTime(Tone.now());
     }
@@ -53,7 +53,7 @@ export class DrivenParam {
     }
 }
 
-/** Raccourci : profondeur par défaut déduite de la définition du réglage. */
+/** Shortcut: default depth derived from the setting definition. */
 export const driven = (target: Tone.InputNode, def: ParamDef, value: number) =>
     new DrivenParam(target, value, defaultDepth(def));
 

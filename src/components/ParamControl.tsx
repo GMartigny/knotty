@@ -12,6 +12,8 @@ const fromSlider = (p: ParamDef, t: number) => {
 };
 
 const format = (p: ParamDef, v: number) => {
+    // Durées de moins d'une seconde en millisecondes : « 2 ms » plutôt que « 0.00 s ».
+    if (p.unit === "s" && v < 1) return `${Math.round(v * 1000)} ms`;
     const n = Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(1)}k` : Number.isInteger(v) ? `${v}` : v.toFixed(v < 10 ? 2 : 1);
     return p.unit ? `${n} ${p.unit}` : n;
 };
@@ -20,13 +22,11 @@ interface Props {
     def: ParamDef;
     value: number;
     onChange(value: number): void;
-    /** Le réglage reste modifiable mais n'a pas d'effet tant que son entrée n'est pas branchée. */
-    inactive?: boolean;
     /** Un câble est branché sur la prise de modulation de ce réglage. */
     modulated?: boolean;
 }
 
-export function ParamControl({ def, value, onChange, inactive, modulated }: Props) {
+export function ParamControl({ def, value, onChange, modulated }: Props) {
     const inputId = useId();
     if (def.options) {
         return (
@@ -52,10 +52,7 @@ export function ParamControl({ def, value, onChange, inactive, modulated }: Prop
 
     const t = toSlider(def, value);
     return (
-        <div
-            className={`param has-port ${inactive ? "is-inactive" : ""} ${modulated ? "is-modulated" : ""}`}
-            title={inactive ? "S'entend quand un câble est branché sur le Déclencheur" : undefined}
-        >
+        <div className={`param has-port ${modulated ? "is-modulated" : ""}`}>
             <label className="param-label" htmlFor={inputId}>
                 {def.label}
                 <output>

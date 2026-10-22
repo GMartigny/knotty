@@ -30,8 +30,6 @@ export interface ParamDef {
     options?: string[];
     /** Paramètre stocké mais sans curseur (ex. motifs du séquenceur). */
     hidden?: boolean;
-    /** Le réglage n'a d'effet que si un câble est branché sur cette entrée (ex. "gate"). */
-    activeWith?: string;
     /** `false` : pas de prise de modulation pour ce curseur. */
     modulatable?: false;
 }
@@ -113,6 +111,8 @@ export interface ModuleInstance {
 
 export interface ModuleDef {
     type: string;
+    /** Indication affichée dans le bloc tant que rien n'est branché sur cette entrée. */
+    idleHint?: { port: string; text: string };
     label: string;
     icon: string;
     category: ModuleCategory;

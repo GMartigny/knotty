@@ -96,6 +96,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
             {!compact && (
                 <div className="block-body">
                     <InputRows ports={def.inputs} />
+                    {def.idleHint && !plugged.has(def.idleHint.port) && <p className="idle-hint">{def.idleHint.text}</p>}
                     {def.type === "envelope" && <EnvelopeShape params={data.params} />}
                     {def.params
                         .filter((p) => !p.hidden)
@@ -104,7 +105,6 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                                 key={p.id}
                                 def={p}
                                 value={data.params[p.id]}
-                                inactive={!!p.activeWith && !plugged.has(p.activeWith)}
                                 modulated={plugged.has(modPort(p.id))}
                                 onChange={(v) => setParam(id, p.id, v)}
                             />

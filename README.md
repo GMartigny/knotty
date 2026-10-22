@@ -19,15 +19,15 @@ npm run dev
 
 Les câbles sont typés `audio` ou `trigger` ; les connexions incompatibles et les boucles sont refusées. Le cœur de chaque prise donne sa couleur (orange = son, jaune = déclencheur) et, pendant un tirage, seules les prises compatibles s'allument.
 
-**Modulation** : chaque curseur continu a sa prise (anneau bleu ciel), qui accepte un câble son. Le signal s'ajoute à la position du curseur : ±moitié de la plage, ou ±100 % de la valeur sur une échelle log. Les paramètres audio (fréquences, résonance, mix, volume) sont modulés en temps réel (`modTarget`, via `DrivenParam` dans `src/modules/mod.ts`, car Tone.js remet un paramètre à zéro dès qu'on y branche un signal) ; les durées sont lues à chaque déclenchement (`setModSource`). Le tempo et la durée de la réverb n'ont pas de prise.
+**Modulation** : chaque curseur continu a sa prise (anneau bleu ciel), qui accepte un câble son. Le signal s'ajoute à la position du curseur : ±moitié de la plage, ou ±100 % de la valeur sur une échelle log. Les paramètres audio (fréquences, résonance, mix, volume) sont modulés en temps réel (`modTarget`, via `DrivenParam` dans `src/modules/mod.ts`, car Tone.js remet un paramètre à zéro dès qu'on y branche un signal) ; les durées de l'Enveloppe sont lues à chaque déclenchement (`setModSource`). Le tempo et la durée de la réverb n'ont pas de prise.
 
-Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion. Le Bruit sonne en continu tant que rien n'est branché sur son entrée « Déclencheur », puis seulement à chaque coup dès qu'un câble y arrive.
+Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion. Comme dans un vrai modulaire, les sources (Sinus, Bruit) sonnent en continu ; c'est l'Enveloppe, déclenchée par le Séquenceur, qui les découpe en notes. Sans Déclencheur branché, l'Enveloppe laisse passer le son tel quel.
 
 ## Feuille de route
 
 1. ~~Bruit → Filtre → Réverb → Sortie, câbles Verlet~~
 2. ~~Séquenceur (4 lignes × 16 pas, une sortie trigger par ligne) et câbles trigger~~
-3. ~~Bloc Sinus déclenchable~~, débrancher un câble en tirant depuis sa prise
+3. ~~Bloc Sinus~~, débrancher un câble en tirant depuis sa prise
 4. ~~Enveloppe ADSR, Volume, prises de modulation sur les curseurs~~, Delay, Distorsion
 5. Impulsions lumineuses le long des câbles
 6. Sauvegarde locale, partage par URL

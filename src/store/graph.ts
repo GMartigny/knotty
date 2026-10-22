@@ -43,6 +43,9 @@ export interface Grab {
 /** Durée de la chute d'un câble débranché avant qu'il disparaisse, en ms. */
 export const DROP_MS = 700;
 
+/** Écart entre la chute de deux blocs quand on efface tout, en ms. */
+const CLEAR_STAGGER_MS = 180;
+
 const isLive = (e: CableEdge) => !e.data?.dropping;
 
 const attachedTo = (e: CableEdge, grab: Grab) =>
@@ -74,20 +77,24 @@ interface GraphState {
 let counter = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 
-const makeNode = (type: string, position: XYPosition, id = newId(type)): ModuleNode => ({
+const makeNode = (type: string, position: XYPosition, id = newId(type), params: ParamValues = {}): ModuleNode => ({
     id,
     type: "module",
     position,
-    data: { type, params: defaultParams(registry[type]) },
+    data: { type, params: { ...defaultParams(registry[type]), ...params } },
 });
 
-/** Patch de départ : Séquenceur ⇢ Bruit → Filtre → Réverb → Sortie. */
+/**
+ * Patch de départ : Bruit → Enveloppe → Filtre → Réverb → Sortie,
+ * l'Enveloppe étant déclenchée par la ligne 1 du Séquenceur (un charley).
+ */
 const initialNodes: ModuleNode[] = [
-    makeNode("sequencer", { x: -120, y: 360 }, "sequencer-1"),
-    makeNode("noise", { x: 40, y: 80 }, "noise-1"),
-    makeNode("filter", { x: 330, y: 40 }, "filter-1"),
-    makeNode("reverb", { x: 620, y: 160 }, "reverb-1"),
-    makeNode("output", { x: 910, y: 80 }, "output-1"),
+    makeNode("sequencer", { x: 40, y: 560 }, "sequencer-1"),
+    makeNode("noise", { x: 40, y: 120 }, "noise-1"),
+    makeNode("envelope", { x: 340, y: 40 }, "envelope-1", { attack: 0.002, decay: 0.08, sustain: 0, hold: 0.01, release: 0.05 }),
+    makeNode("filter", { x: 640, y: 60 }, "filter-1"),
+    makeNode("reverb", { x: 940, y: 180 }, "reverb-1"),
+    makeNode("output", { x: 1240, y: 100 }, "output-1"),
 ];
 
 const cable = (source: string, target: string, kind: PortKind = "audio", sourceHandle = "out", targetHandle = "in"): CableEdge => ({
@@ -101,8 +108,9 @@ const cable = (source: string, target: string, kind: PortKind = "audio", sourceH
 });
 
 const initialEdges: CableEdge[] = [
-    cable("sequencer-1", "noise-1", "trigger", "row0", "gate"),
-    cable("noise-1", "filter-1"),
+    cable("sequencer-1", "envelope-1", "trigger", "row0", "gate"),
+    cable("noise-1", "envelope-1"),
+    cable("envelope-1", "filter-1"),
     cable("filter-1", "reverb-1"),
     cable("reverb-1", "output-1"),
 ];
@@ -236,7 +244,7 @@ export const useGraph = create<GraphState>((set, get) => ({
             .nodes.filter((n) => !n.data.removing)
             .sort((a, b) => a.position.x - b.position.x)
             .map((n) => n.id);
-        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * 70));
+        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * CLEAR_STAGGER_MS));
     },
 
     removeNode(nodeId) {

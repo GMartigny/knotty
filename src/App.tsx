@@ -93,7 +93,8 @@ function Workbench() {
                         return false;
                     }}
                     fitView
-                    fitViewOptions={{ padding: 0.15 }}
+                    fitViewOptions={{ padding: 0.1 }}
+                    minZoom={0.2}
                     proOptions={{ hideAttribution: true }}
                 >
                     <Background variant={BackgroundVariant.Dots} gap={28} size={3} color="var(--peg)" />

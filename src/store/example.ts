@@ -29,6 +29,8 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
  *  3. Charley — le même bruit, enveloppe très brève, passe-haut, à contretemps
  *  4. Basse — dent de scie, enveloppe, passe-bas balayé par un oscillateur lent
  * Le tout passe par un mixeur, une réverb légère et la sortie.
+ * Mélodie — sur un second séquenceur : triangle vers 800 Hz dont la hauteur est balancée
+ * par un sinus lent (atténué par un Volume) ; chaque note tombe ainsi à une hauteur différente.
  */
 export function examplePatch(): { nodes: ModuleNode[]; edges: CableEdge[] } {
     // Une ligne par piste ; les enveloppes font ~420 px de haut.
@@ -64,6 +66,21 @@ export function examplePatch(): { nodes: ModuleNode[]; edges: CableEdge[] } {
         node("bass-filter", "filter", colFilter, row(3) + 60, { mode: 0, frequency: 520, Q: 7 }),
         node("lfo", "sine", colSource, row(3) + 290, { shape: 0, frequency: 0.25 }),
 
+        // Mélodie : son propre séquenceur, calé sur le même tempo
+        node("mel-seq", "sequencer", 0, row(4) + 160, {
+            bpm: 116,
+            row0: steps(1, 4, 7, 9, 10, 13, 15),
+            row1: 0,
+            row2: 0,
+            row3: 0,
+        }),
+        node("mel-osc", "sine", colSource, row(4) + 160, { shape: 2, frequency: 800 }),
+        node("mel-lfo", "sine", -260, row(4) + 460, { shape: 0, frequency: 0.37 }),
+        // Ampleur du balancement : −14 dB ≈ ±20 % autour de 800 Hz.
+        node("mel-depth", "volume", 80, row(4) + 460, { volume: -14 }),
+        node("mel-env", "envelope", colEnv, row(4) + 140, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
+        node("mel-vol", "volume", colFilter, row(4) + 200, { volume: -5 }),
+
         // Mélange et sortie
         node("mix", "mixer", 1380, row(1) + 330, { level1: 100, level2: 55, level3: 35, level4: 65 }),
         node("reverb", "reverb", 1680, row(1) + 350, { decay: 2.2, wet: 0.22 }),
@@ -92,6 +109,13 @@ export function examplePatch(): { nodes: ModuleNode[]; edges: CableEdge[] } {
         cable("bass-env", "out", "bass-filter", "in"),
         cable("bass-filter", "out", "mix", "in4"),
         cable("lfo", "out", "bass-filter", "mod:frequency"),
+
+        cable("mel-seq", "row0", "mel-env", "gate", "trigger"),
+        cable("mel-lfo", "out", "mel-depth", "in"),
+        cable("mel-depth", "out", "mel-osc", "mod:frequency"),
+        cable("mel-osc", "out", "mel-env", "in"),
+        cable("mel-env", "out", "mel-vol", "in"),
+        cable("mel-vol", "out", "reverb", "in"),
 
         cable("mix", "out", "reverb", "in"),
         cable("reverb", "out", "out", "in"),

@@ -26,6 +26,6 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 1. ~~Bruit → Filtre → Réverb → Sortie, câbles Verlet~~
 2. ~~Séquenceur (4 lignes × 16 pas, une sortie trigger par ligne) et câbles trigger~~
 3. ~~Bloc Sinus déclenchable~~, débrancher un câble en tirant depuis sa prise
-4. Delay, Distorsion
+4. ~~Enveloppe ADSR~~, Delay, Distorsion
 5. Impulsions lumineuses le long des câbles
 6. Sauvegarde locale, partage par URL

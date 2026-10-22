@@ -283,6 +283,29 @@ button {
     background: var(--accent);
 }
 
+/* ——— Enveloppe ——— */
+
+.env-shape {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--cream-shade);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+}
+
+.env-fill {
+    fill: var(--accent);
+    opacity: 0.45;
+}
+
+.env-line {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.5px;
+    stroke-linejoin: round;
+}
+
 /* ——— Séquenceur ——— */
 
 .block-sequencer {

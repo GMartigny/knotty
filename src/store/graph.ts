@@ -99,6 +99,39 @@ const initialEdges: CableEdge[] = [
     cable("reverb-1", "output-1"),
 ];
 
+/** Taille supposée d'un nouveau bloc tant qu'il n'est pas mesuré. */
+const NEW_BLOCK = { width: 240, height: 230 };
+const MARGIN = 24;
+
+/**
+ * Première place libre autour de `wanted`, en tournant en spirale,
+ * pour qu'un nouveau bloc ne recouvre pas les prises d'un autre.
+ */
+const freeSpot = (nodes: ModuleNode[], wanted: XYPosition): XYPosition => {
+    const overlaps = (p: XYPosition) =>
+        nodes.some((n) => {
+            const w = n.measured?.width ?? NEW_BLOCK.width;
+            const h = n.measured?.height ?? NEW_BLOCK.height;
+            return (
+                p.x < n.position.x + w + MARGIN &&
+                p.x + NEW_BLOCK.width + MARGIN > n.position.x &&
+                p.y < n.position.y + h + MARGIN &&
+                p.y + NEW_BLOCK.height + MARGIN > n.position.y
+            );
+        });
+    if (!overlaps(wanted)) return wanted;
+    for (let ring = 1; ring < 12; ring++) {
+        const radius = ring * 90;
+        const steps = ring * 8;
+        for (let i = 0; i < steps; i++) {
+            const angle = (i / steps) * Math.PI * 2;
+            const p = { x: wanted.x + Math.cos(angle) * radius, y: wanted.y + Math.sin(angle) * radius };
+            if (!overlaps(p)) return p;
+        }
+    }
+    return wanted;
+};
+
 /** Vrai si `to` est atteignable depuis `from` (pour refuser les boucles). */
 const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
     const stack = [from];
@@ -175,7 +208,10 @@ export const useGraph = create<GraphState>((set, get) => ({
         });
     },
 
-    addModule: (type, position) => set({ nodes: [...get().nodes, makeNode(type, position)] }),
+    addModule: (type, position) => {
+        const nodes = get().nodes;
+        set({ nodes: [...nodes, makeNode(type, freeSpot(nodes, position))] });
+    },
 
     setParam: (nodeId, paramId, value) =>
         set({

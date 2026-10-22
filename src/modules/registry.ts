@@ -5,9 +5,10 @@ import { reverb } from "./reverb";
 import { output } from "./output";
 import { sequencer } from "./sequencer";
 import { sine } from "./sine";
+import { envelope } from "./envelope";
 
 /** Ajouter un module = l'importer ici. */
-const modules: ModuleDef[] = [sequencer, sine, noise, filter, reverb, output];
+const modules: ModuleDef[] = [sequencer, sine, noise, envelope, filter, reverb, output];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
 

@@ -5,6 +5,7 @@ import { useGraph, type ModuleNode } from "../store/graph";
 import { useLevel } from "../audio/levels";
 import { ParamControl } from "./ParamControl";
 import { SequencerGrid } from "./SequencerGrid";
+import { EnvelopeShape } from "./EnvelopeShape";
 import type { PortDef } from "../modules/types";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
@@ -50,6 +51,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
             </header>
 
             <div className="block-body">
+                {def.type === "envelope" && <EnvelopeShape params={data.params} />}
                 {def.params
                     .filter((p) => !p.hidden)
                     .map((p) => (

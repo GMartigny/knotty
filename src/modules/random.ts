@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { SOURCE_LEVEL, type ModuleDef } from "./types";
 
 /** Signal level of a value index: evenly spread from −1 to 1, scaled to a source's normal level. */
-const levelOf = (index: number, count: number) => (count > 1 ? -1 + (2 * index) / (count - 1) : 0) * SOURCE_LEVEL;
+export const levelOf = (index: number, count: number) => (count > 1 ? -1 + (2 * index) / (count - 1) : 0) * SOURCE_LEVEL;
 
 /**
  * Random: on each trigger, rolls a die and holds the value until the next one ("sample & hold").

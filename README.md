@@ -25,3 +25,5 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 npm install
 npm run dev
 ```
+
+Tests: `npm test` (unit), `npm run test:e2e` (in the browser).

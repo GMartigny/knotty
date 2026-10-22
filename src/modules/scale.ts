@@ -14,10 +14,23 @@ const OCTAVES = [3, 4, 5];
 /** Range covered by the signal, in octaves. */
 const SPAN = 2;
 
+/**
+ * MIDI note picked by a signal value `m` (−1 … 1, clamped) among the notes of a scale
+ * over two octaves from the root, the root of the octave above included: −1 → the root, 1 → two octaves up.
+ */
+export function pickNote(m: number, scaleIndex: number, rootIndex: number, octaveIndex: number) {
+    const degrees = SCALES[scaleIndex] ?? SCALES[2];
+    const notes: number[] = [];
+    for (let o = 0; o < SPAN; o++) for (const d of degrees) notes.push(o * 12 + d);
+    notes.push(SPAN * 12);
+    const clamped = Math.max(-1, Math.min(1, m || 0));
+    const index = Math.round(((clamped + 1) / 2) * (notes.length - 1));
+    return midiC(OCTAVES[octaveIndex] ?? 4) + (ROOTS[rootIndex] ?? 0) + notes[index];
+}
 
 /**
  * Turns a signal into in-tune notes: on each trigger, the signal value (−1 … 1)
- * picks a note of the scale over two octaves. With no signal plugged in, plays the root.
+ * picks a note of the scale over two octaves. With no signal plugged in, plays the middle root.
  */
 export const scale: ModuleDef = {
     type: "scale",
@@ -43,16 +56,7 @@ export const scale: ModuleDef = {
         const listeners = new Set<TriggerListener>();
         let last = -1;
 
-        const pick = () => {
-            const degrees = SCALES[v.scale] ?? SCALES[2];
-            // All the scale's notes over the range, including the root of the octave above.
-            const notes: number[] = [];
-            for (let o = 0; o < SPAN; o++) for (const d of degrees) notes.push(o * 12 + d);
-            notes.push(SPAN * 12);
-            const m = Math.max(-1, Math.min(1, (meter.getValue() as number) / SOURCE_LEVEL || 0));
-            const index = Math.round(((m + 1) / 2) * (notes.length - 1));
-            return midiC(OCTAVES[v.octave] ?? 4) + (ROOTS[v.root] ?? 0) + notes[index];
-        };
+        const pick = () => pickNote((meter.getValue() as number) / SOURCE_LEVEL, v.scale, v.root, v.octave);
 
         return {
             input: (port) => (port === "in" ? input : undefined),

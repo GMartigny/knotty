@@ -29,6 +29,8 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 ## Checking
 
-- `npm run build` (includes `tsc -b`).
-- Manual Playwright tests on `vite preview` (port 4173): levels via `--level`, block overlaps and framing in the presets, no page errors.
+- `npm run build` (includes `tsc -b`, tests included).
+- `npm test`: Vitest unit tests next to the code (`src/**/*.test.ts`, jsdom). They cover the logic that doesn't need Web Audio: the store (connections, undo/redo, rows, shared tempo), persistence, presets' integrity, settings math, notes, the rope physics, the Scale and Random logic. `npm run test:coverage` for the report.
+- `npm run test:e2e`: Playwright tests in `e2e/` on the built app (`vite preview`, port 4173): presets' layout and sound, editing (palette, cables, undo, hold-to-clear, rows, comments, keyboard, dice, persistence). They cover the audio engine and the UI, which unit tests don't.
+- Keep logic out of components and Tone nodes when it can be pure (e.g. `pickNote`, `fromSlider`), so it can be unit-tested.
 - Automatic Vercel deployment on every push to `main`.

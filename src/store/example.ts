@@ -184,7 +184,7 @@ function metalPatch(): Patch {
     const cFx3 = 1660;
     const cBus = 2300;
     const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
-    const dry = { attack: 0.001, sustain: 0, hold: 0.005 };
+    const dry = { attack: 0.001, sustain: 0, hold: 0.01 };
     const SOLO_Y = 3000;
     const HARM_Y = SOLO_Y + 780;
 

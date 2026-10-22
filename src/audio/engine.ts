@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { registry } from "../modules/registry";
-import type { ModuleInstance, ParamValues } from "../modules/types";
+import { modParamOf, type ModuleInstance, type ParamValues } from "../modules/types";
 import { useGraph, type CableEdge, type ModuleNode } from "../store/graph";
 
 interface LiveModule {
@@ -11,7 +11,18 @@ interface LiveModule {
 
 type LiveCable =
     | { kind: "audio"; from: Tone.ToneAudioNode; to: Tone.InputNode }
-    | { kind: "trigger"; target: string; port: string; unsubscribe(): void };
+    | { kind: "trigger"; target: string; port: string; unsubscribe(): void }
+    | {
+          kind: "mod";
+          from: Tone.ToneAudioNode;
+          target: string;
+          paramId: string;
+          /** Modulation en temps réel : signal × profondeur → paramètre audio. */
+          scaler?: Tone.Multiply;
+          depth?(base: number): number;
+          /** Modulation lue ponctuellement : valeur instantanée du signal. */
+          meter?: Tone.DCMeter;
+      };
 
 /** Durée de la lueur d'un câble trigger après une impulsion, en ms. */
 const PULSE_MS = 180;
@@ -27,6 +38,8 @@ class AudioEngine {
     private triggerInputs = new Map<string, number>();
     /** Dernière impulsion visuelle par câble trigger. */
     private pulses = new Map<string, number>();
+    /** Modulations lues ponctuellement, par réglage (`nodeId:paramId`) : plusieurs câbles s'additionnent. */
+    private sampled = new Map<string, Set<Tone.DCMeter>>();
     private running = false;
 
     constructor() {
@@ -70,8 +83,9 @@ class AudioEngine {
         return this.modules.get(nodeId)?.instance.position?.() ?? -1;
     }
 
-    private sync(nodes: ModuleNode[], allEdges: CableEdge[]) {
-        // Un câble qui tombe après débranchement n'est plus connecté.
+    private sync(allNodes: ModuleNode[], allEdges: CableEdge[]) {
+        // Un bloc ou un câble en train de tomber est déjà retiré pour l'audio.
+        const nodes = allNodes.filter((n) => !n.data.removing);
         const edges = allEdges.filter((e) => !e.data?.dropping);
         const nodeIds = new Set(nodes.map((n) => n.id));
         const edgeIds = new Set(edges.map((e) => e.id));
@@ -99,7 +113,14 @@ class AudioEngine {
             }
             if (live.params === node.data.params) continue;
             for (const [key, value] of Object.entries(node.data.params)) {
-                if (live.params[key] !== value) live.instance.setParam(key, value);
+                if (live.params[key] === value) continue;
+                live.instance.setParam(key, value);
+                // La profondeur de modulation suit le curseur (ex. ±100 % de la fréquence choisie).
+                for (const c of this.cables.values()) {
+                    if (c.kind === "mod" && c.target === node.id && c.paramId === key && c.scaler && c.depth) {
+                        c.scaler.factor.rampTo(c.depth(value), 0.05);
+                    }
+                }
             }
             live.params = node.data.params;
         }
@@ -132,10 +153,54 @@ class AudioEngine {
         }
 
         const from = src.output(outPort);
+        if (!from) return;
+
+        const paramId = modParamOf(inPort);
+        if (paramId) {
+            this.plugMod(edge, from, dst, paramId);
+            return;
+        }
+
         const to = dst.input(inPort);
-        if (!from || !to) return;
+        if (!to) return;
         from.connect(to);
         this.cables.set(edge.id, { kind: "audio", from, to });
+    }
+
+    private plugMod(edge: CableEdge, from: Tone.ToneAudioNode, dst: ModuleInstance, paramId: string) {
+        const base = this.modules.get(edge.target)?.params[paramId] ?? 0;
+        const target = dst.modTarget?.(paramId);
+        if (target) {
+            const scaler = new Tone.Multiply(target.depth(base));
+            from.connect(scaler);
+            scaler.connect(target.param);
+            this.cables.set(edge.id, { kind: "mod", from, target: edge.target, paramId, scaler, depth: target.depth });
+            return;
+        }
+        if (!dst.setModSource) return;
+        const meter = new Tone.DCMeter();
+        from.connect(meter);
+        const key = `${edge.target}:${paramId}`;
+        const meters = this.sampled.get(key) ?? new Set();
+        meters.add(meter);
+        this.sampled.set(key, meters);
+        this.updateSampled(edge.target, paramId);
+        this.cables.set(edge.id, { kind: "mod", from, target: edge.target, paramId, meter });
+    }
+
+    private updateSampled(nodeId: string, paramId: string) {
+        const meters = this.sampled.get(`${nodeId}:${paramId}`);
+        const instance = this.modules.get(nodeId)?.instance;
+        if (!meters?.size) {
+            this.sampled.delete(`${nodeId}:${paramId}`);
+            instance?.setModSource?.(paramId, null);
+            return;
+        }
+        instance?.setModSource?.(paramId, () => {
+            let sum = 0;
+            for (const m of meters) sum += m.getValue() as number;
+            return Math.max(-1, Math.min(1, sum));
+        });
     }
 
     private unplug(id: string, cable: LiveCable) {
@@ -150,6 +215,21 @@ class AudioEngine {
             } else {
                 this.triggerInputs.delete(key);
                 this.modules.get(cable.target)?.instance.setTriggerConnected?.(cable.port, false);
+            }
+            return;
+        }
+        if (cable.kind === "mod") {
+            const sink = cable.scaler ?? cable.meter;
+            try {
+                if (sink) cable.from.disconnect(sink);
+            } catch {
+                // déjà déconnecté par la destruction d'un module
+            }
+            cable.scaler?.dispose();
+            if (cable.meter) {
+                this.sampled.get(`${cable.target}:${cable.paramId}`)?.delete(cable.meter);
+                cable.meter.dispose();
+                this.updateSampled(cable.target, cable.paramId);
             }
             return;
         }

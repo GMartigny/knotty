@@ -1,11 +1,13 @@
-import type { ParamDef } from "../modules/types";
+import { useId } from "react";
+import { Handle, Position } from "@xyflow/react";
+import { isModulatable, modPort, type ParamDef } from "../modules/types";
 
 const toSlider = (p: ParamDef, v: number) =>
     p.scale === "log" ? Math.log(v / p.min) / Math.log(p.max / p.min) : (v - p.min) / (p.max - p.min);
 
 const fromSlider = (p: ParamDef, t: number) => {
     const raw = p.scale === "log" ? p.min * Math.pow(p.max / p.min, t) : p.min + t * (p.max - p.min);
-    const step = p.step ?? (p.scale === "log" ? 1 : 0.01);
+    const step = p.step ?? (p.scale === "log" ? (raw < 10 ? 0.01 : 1) : 0.01);
     return Math.round(raw / step) * step;
 };
 
@@ -20,9 +22,12 @@ interface Props {
     onChange(value: number): void;
     /** Le réglage reste modifiable mais n'a pas d'effet tant que son entrée n'est pas branchée. */
     inactive?: boolean;
+    /** Un câble est branché sur la prise de modulation de ce réglage. */
+    modulated?: boolean;
 }
 
-export function ParamControl({ def, value, onChange, inactive }: Props) {
+export function ParamControl({ def, value, onChange, inactive, modulated }: Props) {
+    const inputId = useId();
     if (def.options) {
         return (
             <div className="param">
@@ -47,15 +52,19 @@ export function ParamControl({ def, value, onChange, inactive }: Props) {
 
     const t = toSlider(def, value);
     return (
-        <label
-            className={`param ${inactive ? "is-inactive" : ""}`}
+        <div
+            className={`param has-port ${inactive ? "is-inactive" : ""} ${modulated ? "is-modulated" : ""}`}
             title={inactive ? "S'entend quand un câble est branché sur le Déclencheur" : undefined}
         >
-            <span className="param-label">
+            <label className="param-label" htmlFor={inputId}>
                 {def.label}
-                <output>{format(def, value)}</output>
-            </span>
+                <output>
+                    {modulated && <span className="mod-badge" aria-label="modulé">∿ </span>}
+                    {format(def, value)}
+                </output>
+            </label>
             <input
+                id={inputId}
                 className="slider nodrag"
                 type="range"
                 min={0}
@@ -65,6 +74,15 @@ export function ParamControl({ def, value, onChange, inactive }: Props) {
                 style={{ "--t": t } as React.CSSProperties}
                 onChange={(e) => onChange(fromSlider(def, Number(e.target.value)))}
             />
-        </label>
+            {isModulatable(def) && (
+                <Handle
+                    id={modPort(def.id)}
+                    type="target"
+                    position={Position.Left}
+                    className="socket socket-mod"
+                    title={`Moduler « ${def.label} »`}
+                />
+            )}
+        </div>
     );
 }

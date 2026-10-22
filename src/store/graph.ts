@@ -10,12 +10,14 @@ import {
     type NodeChange,
     type XYPosition,
 } from "@xyflow/react";
-import { portKind, registry } from "../modules/registry";
+import { compatible, portKind, registry } from "../modules/registry";
 import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
 
 export interface ModuleData extends Record<string, unknown> {
     type: string;
     params: ParamValues;
+    /** Bloc en train de tomber après suppression. */
+    removing?: boolean;
 }
 
 export type ModuleNode = Node<ModuleData, "module">;
@@ -27,11 +29,15 @@ export interface CableData extends Record<string, unknown> {
 
 export type CableEdge = Edge<CableData, "cable">;
 
-/** Prise depuis laquelle on tire un câble alors qu'elle est déjà branchée. */
+/** Prise depuis laquelle on tire un câble. */
 export interface Grab {
     nodeId: string;
     handleId: string;
     side: "source" | "target";
+    /** Type de la prise tirée, pour allumer les prises compatibles. */
+    kind?: PortKind;
+    /** La prise avait déjà au moins un câble : lâcher dans le vide le débranche. */
+    plugged?: boolean;
 }
 
 /** Durée de la chute d'un câble débranché avant qu'il disparaisse, en ms. */
@@ -156,15 +162,16 @@ export const useGraph = create<GraphState>((set, get) => ({
     onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
 
     startGrab(grab) {
-        // On ne retient le tirage que si la prise a déjà au moins un câble.
+        const node = get().nodes.find((n) => n.id === grab.nodeId);
+        const kind = node && portKind(node.data.type, grab.handleId, grab.side === "source" ? "out" : "in");
         const plugged = get().edges.some((e) => isLive(e) && attachedTo(e, grab));
-        set({ grab: plugged ? grab : null });
+        set({ grab: { ...grab, kind, plugged } });
     },
 
     endGrab(droppedInVoid) {
         const { grab } = get();
         set({ grab: null });
-        if (grab && droppedInVoid) get().unplug(grab);
+        if (grab?.plugged && droppedInVoid) get().unplug(grab);
     },
 
     unplug(grab) {
@@ -180,7 +187,7 @@ export const useGraph = create<GraphState>((set, get) => ({
     },
 
     isValidConnection(connection) {
-        const { nodes } = get();
+        const nodes = get().nodes.filter((n) => !n.data.removing);
         const edges = get().edges.filter(isLive);
         const { source, target, sourceHandle, targetHandle } = connection;
         if (!source || !target || source === target) return false;
@@ -189,7 +196,7 @@ export const useGraph = create<GraphState>((set, get) => ({
         if (!src || !dst) return false;
         const outKind = portKind(src.data.type, sourceHandle ?? "", "out");
         const inKind = portKind(dst.data.type, targetHandle ?? "", "in");
-        if (!outKind || outKind !== inKind) return false;
+        if (!outKind || !inKind || !compatible(outKind, inKind)) return false;
         const duplicate = edges.some(
             (e) =>
                 e.source === source &&
@@ -221,9 +228,30 @@ export const useGraph = create<GraphState>((set, get) => ({
             ),
         }),
 
-    removeNode: (nodeId) =>
+    removeNode(nodeId) {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (!node || node.data.removing) return;
+        // Le bloc tombe et s'efface ; ses câbles se décrochent de son côté et tombent aussi.
+        // Pour le moteur audio, il est déjà retiré.
         set({
-            nodes: get().nodes.filter((n) => n.id !== nodeId),
-            edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
-        }),
+            nodes: get().nodes.map((n) =>
+                n.id === nodeId
+                    ? { ...n, draggable: false, selectable: false, connectable: false, data: { ...n.data, removing: true } }
+                    : n,
+            ),
+            edges: get().edges.map((e) =>
+                isLive(e) && (e.source === nodeId || e.target === nodeId)
+                    ? { ...e, selectable: false, data: { ...e.data!, dropping: e.source === nodeId ? "source" : "target" } }
+                    : e,
+            ),
+        });
+        setTimeout(
+            () =>
+                set({
+                    nodes: get().nodes.filter((n) => n.id !== nodeId),
+                    edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+                }),
+            DROP_MS,
+        );
+    },
 }));

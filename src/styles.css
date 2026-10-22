@@ -8,6 +8,7 @@
     --cream-shade: #f1e3c8;
     --cable-audio: #ff8c42;
     --cable-trigger: #ffd166;
+    --mod-ring: #7dd3fc;
     --outline: 3px;
     font-family: "Fredoka", system-ui, sans-serif;
     color: var(--ink);
@@ -52,6 +53,7 @@ button {
     background: var(--ink);
     color: var(--cream);
     padding: 24px 18px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -151,6 +153,29 @@ button {
 .react-flow__node.dragging .block {
     transform: rotate(-2deg) scale(1.03);
     box-shadow: 0 14px 0 rgba(26, 27, 58, 0.55);
+}
+
+/* Bloc supprimé : il tombe en basculant puis s'efface, comme les câbles débranchés. */
+.block.is-removing {
+    pointer-events: none;
+    animation: block-fall 0.7s cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+}
+
+@keyframes block-fall {
+    0% {
+        transform: translateY(0) rotate(0);
+        opacity: 1;
+    }
+    15% {
+        transform: translateY(-10px) rotate(-3deg);
+    }
+    60% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(220px) rotate(14deg);
+        opacity: 0;
+    }
 }
 
 .block.is-selected {
@@ -393,17 +418,28 @@ button {
 
 /* ——— Prises ——— */
 
+/*
+ * Code couleur : le cœur d'une prise dit quel signal y passe (orange = son, jaune = déclencheur).
+ * L'anneau dit son rôle : crème pour une entrée/sortie, bleu ciel pour la prise de réglage d'un curseur,
+ * qui accepte le son (cœur orange).
+ */
+
 .react-flow__handle.socket {
+    --tx: -50%;
+    --s: 1;
+    --glow: var(--cable-audio);
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background: var(--ink);
     border: var(--outline) solid var(--cream);
     box-shadow: 0 0 0 var(--outline) var(--ink);
-    transition: transform 0.12s;
+    transform: translate(var(--tx), -50%) scale(var(--s));
+    transition: transform 0.12s, opacity 0.12s, box-shadow 0.12s;
 }
 
-.react-flow__handle.socket::after {
+.react-flow__handle.socket::after,
+.legend-socket::after {
     content: "";
     position: absolute;
     inset: 3px;
@@ -411,8 +447,23 @@ button {
     background: var(--cable-audio);
 }
 
-.react-flow__handle.socket-trigger::after {
+.react-flow__handle.socket-trigger::after,
+.legend-socket.socket-trigger::after {
     background: var(--cable-trigger);
+}
+
+.react-flow__handle.socket-trigger {
+    --glow: var(--cable-trigger);
+}
+
+.react-flow__handle.socket-mod {
+    width: 16px;
+    height: 16px;
+    border-color: var(--mod-ring);
+}
+
+.react-flow__handle.socket-mod::after {
+    inset: 2px;
 }
 
 .react-flow__handle-left.socket {
@@ -420,17 +471,121 @@ button {
 }
 
 .react-flow__handle-right.socket {
+    --tx: 50%;
     right: -13px;
 }
 
 .react-flow__handle.socket:hover,
 .react-flow__handle.socket.connectingto.valid {
-    transform: translate(0, -50%) scale(1.35);
+    --s: 1.35;
 }
 
-.react-flow__handle.socket.connectingfrom ~ *,
-.react-flow__handle.socket.connectingto:not(.valid) {
-    opacity: 0.4;
+/* Pendant un tirage : les prises compatibles s'allument, les autres s'effacent. */
+.mat[data-grab] .react-flow__handle.socket {
+    opacity: 0.25;
+}
+
+.mat[data-grab="out-audio"] .react-flow__handle.socket.target:is(.socket-audio, .socket-mod),
+.mat[data-grab="out-trigger"] .react-flow__handle.socket.target.socket-trigger,
+.mat[data-grab="in-audio"] .react-flow__handle.socket.source.socket-audio,
+.mat[data-grab="in-mod"] .react-flow__handle.socket.source.socket-audio,
+.mat[data-grab="in-trigger"] .react-flow__handle.socket.source.socket-trigger {
+    --s: 1.3;
+    opacity: 1;
+    box-shadow:
+        0 0 0 var(--outline) var(--ink),
+        0 0 0 8px color-mix(in srgb, var(--glow) 45%, transparent);
+}
+
+.mat[data-grab] .react-flow__handle.socket.connectingfrom {
+    opacity: 1;
+    --s: 1.15;
+}
+
+/* ——— Lignes de prises et légende ——— */
+
+.port-rows {
+    display: grid;
+    gap: 6px;
+}
+
+.port-row,
+.param.has-port {
+    position: relative;
+    /* La ligne va jusqu'au bord du bloc pour que sa prise s'y accroche. */
+    margin-left: -14px;
+    padding-left: 14px;
+}
+
+.port-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.port-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--cable-audio);
+}
+
+.port-dot-trigger {
+    background: var(--cable-trigger);
+}
+
+.param.has-port .react-flow__handle.socket-mod {
+    top: 50%;
+}
+
+.param.is-modulated .slider::-webkit-slider-thumb {
+    background: var(--mod-ring);
+}
+
+.param.is-modulated .slider::-moz-range-thumb {
+    background: var(--mod-ring);
+}
+
+.mod-badge {
+    font-weight: 700;
+}
+
+.legend {
+    margin: auto 0 0;
+    display: grid;
+    gap: 10px;
+    font-size: 0.8rem;
+}
+
+.legend dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.legend dd {
+    margin: 2px 0 0 26px;
+    opacity: 0.7;
+    line-height: 1.35;
+}
+
+.legend-socket {
+    position: relative;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: var(--outline) solid var(--cream);
+}
+
+.legend-socket.socket-mod {
+    border-color: var(--mod-ring);
 }
 
 /* ——— Câbles ——— */
@@ -543,6 +698,9 @@ button {
     .seq-step.is-on.is-playing {
         transform: none;
         transition: none;
+    }
+    .block.is-removing {
+        animation: cable-fade 0.4s forwards;
     }
     .start-button,
     .palette-item {

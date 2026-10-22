@@ -38,7 +38,11 @@ export const sequencer: ModuleDef = {
         label: `Ligne ${row + 1}`,
         inline: true,
     })),
-    params: [{ id: "bpm", label: "Tempo", min: 50, max: 200, default: 110, step: 1, unit: "bpm" }, ...rowParams],
+    params: [
+        // Le tempo pilote tout le séquenceur : pas de modulation.
+        { id: "bpm", label: "Tempo", min: 50, max: 200, default: 110, step: 1, unit: "bpm", modulatable: false },
+        ...rowParams,
+    ],
     create(params) {
         const transport = Tone.getTransport();
         transport.bpm.value = params.bpm;

@@ -1,4 +1,4 @@
-import type { ModuleCategory, ModuleDef, PortKind } from "./types";
+import { isModulatable, modParamOf, type ModuleCategory, type ModuleDef, type PortKind } from "./types";
 import { noise } from "./noise";
 import { filter } from "./filter";
 import { reverb } from "./reverb";
@@ -24,6 +24,17 @@ export const categoryColor: Record<ModuleCategory, string> = {
 
 export const portKind = (type: string, portId: string, side: "in" | "out"): PortKind | undefined => {
     const def = registry[type];
-    const ports = side === "in" ? def?.inputs : def?.outputs;
-    return ports?.find((p) => p.id === portId)?.kind;
+    if (!def) return undefined;
+    if (side === "in") {
+        const paramId = modParamOf(portId);
+        if (paramId) {
+            const p = def.params.find((d) => d.id === paramId);
+            return p && isModulatable(p) ? "mod" : undefined;
+        }
+    }
+    const ports = side === "in" ? def.inputs : def.outputs;
+    return ports.find((p) => p.id === portId)?.kind;
 };
+
+/** Une sortie peut-elle se brancher sur une entrée ? L'audio sert aussi de signal de modulation. */
+export const compatible = (out: PortKind, into: PortKind) => out === into || (out === "audio" && into === "mod");

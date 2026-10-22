@@ -4,7 +4,7 @@ import { physics } from "./physics";
 import { useLevel } from "../audio/levels";
 import { useGraph, type CableEdge as CableEdgeType } from "../store/graph";
 
-const KIND_COLOR = {
+const KIND_COLOR: Record<string, string> = {
     audio: "var(--cable-audio)",
     trigger: "var(--cable-trigger)",
 };

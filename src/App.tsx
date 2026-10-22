@@ -30,8 +30,10 @@ function DraggingCable({ fromX, fromY, toX, toY }: ConnectionLineComponentProps)
 }
 
 function Workbench() {
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, isValidConnection, addModule, startGrab, endGrab } =
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, isValidConnection, addModule, startGrab, endGrab, removeNode, grab } =
         useGraph();
+    // Type de la prise tirée (ex. "out-audio") : la feuille de style allume les prises compatibles.
+    const grabbing = grab?.kind ? `${grab.side === "source" ? "out" : "in"}-${grab.kind}` : undefined;
     const { screenToFlowPosition } = useReactFlow();
     const [started, setStarted] = useState(engine.isRunning);
 
@@ -59,6 +61,7 @@ function Workbench() {
             <Palette onAdd={addAtCenter} />
             <main
                 className="mat"
+                data-grab={grabbing}
                 onDragOver={(e) => {
                     if (e.dataTransfer.types.includes(DRAG_TYPE)) {
                         e.preventDefault();
@@ -83,6 +86,15 @@ function Workbench() {
                     connectionLineComponent={DraggingCable}
                     connectionRadius={40}
                     deleteKeyCode={["Backspace", "Delete"]}
+                    onBeforeDelete={async ({ nodes: deletedNodes, edges: deletedEdges }) => {
+                        // Suppression au clavier : les blocs tombent (et leurs câbles avec eux) ;
+                        // les câbles sélectionnés seuls disparaissent tout de suite.
+                        deletedNodes.forEach((n) => removeNode(n.id));
+                        const nodeIds = new Set(deletedNodes.map((n) => n.id));
+                        const lone = deletedEdges.filter((e) => !nodeIds.has(e.source) && !nodeIds.has(e.target));
+                        if (lone.length) onEdgesChange(lone.map((e) => ({ type: "remove", id: e.id })));
+                        return false;
+                    }}
                     fitView
                     fitViewOptions={{ padding: 0.25 }}
                     proOptions={{ hideAttribution: true }}

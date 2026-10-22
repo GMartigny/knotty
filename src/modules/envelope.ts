@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import type { ModuleDef } from "./types";
+import { ModReader, type ModuleDef } from "./types";
 
 /**
  * Enveloppe ADSR : façonne le volume du son qui la traverse à chaque déclenchement.
@@ -34,21 +34,27 @@ export const envelope: ModuleDef = {
             release: params.release,
         }).connect(out);
         input.fan(open, env);
-        let hold = params.hold;
+        // Valeurs des curseurs ; la modulation éventuelle est appliquée à chaque déclenchement.
+        const base = { ...params };
+        const mods = new ModReader(envelope.params);
 
         return {
             input: () => input,
             output: () => out,
             setParam(id, value) {
-                if (id === "attack") env.attack = value;
-                if (id === "decay") env.decay = value;
-                if (id === "sustain") env.sustain = value;
-                if (id === "release") env.release = value;
-                if (id === "hold") hold = value;
+                base[id] = value;
             },
-            // La note est tenue le temps de l'attaque, du déclin et de « Durée tenue », puis relâchée.
-            trigger: (_port, time) => env.triggerAttackRelease(Number(env.attack) + Number(env.decay) + hold, time),
+            trigger: (_port, time) => {
+                const v = (id: string) => mods.value(id, base[id]);
+                env.attack = v("attack");
+                env.decay = v("decay");
+                env.sustain = v("sustain");
+                env.release = v("release");
+                // La note est tenue le temps de l'attaque, du déclin et de « Durée tenue », puis relâchée.
+                env.triggerAttackRelease(Number(env.attack) + Number(env.decay) + v("hold"), time);
+            },
             setTriggerConnected: (_port, connected) => open.gain.rampTo(connected ? 0 : 1, 0.03),
+            setModSource: (id, read) => mods.set(id, read),
             dispose: () => {
                 input.dispose();
                 open.dispose();

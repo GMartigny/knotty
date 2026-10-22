@@ -33,6 +33,31 @@ export function Palette({ onAdd }: Props) {
                     </li>
                 ))}
             </ul>
+
+            {/* Légende des prises : la couleur du cœur dit quel signal passe. */}
+            <dl className="legend">
+                <div>
+                    <dt>
+                        <span className="legend-socket socket-audio" aria-hidden />
+                        Son
+                    </dt>
+                    <dd>se branche sur une entrée son ou un réglage</dd>
+                </div>
+                <div>
+                    <dt>
+                        <span className="legend-socket socket-trigger" aria-hidden />
+                        Déclencheur
+                    </dt>
+                    <dd>du séquenceur vers les entrées Déclencheur</dd>
+                </div>
+                <div>
+                    <dt>
+                        <span className="legend-socket socket-mod" aria-hidden />
+                        Réglage
+                    </dt>
+                    <dd>reçoit un son pour faire bouger le curseur</dd>
+                </div>
+            </dl>
         </aside>
     );
 }

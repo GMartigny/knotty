@@ -85,6 +85,10 @@ interface GraphState {
     clearAll(): void;
     /** Replaces the mat with a preset (see EXAMPLES). */
     loadExample(id?: string): void;
+    /** Undoes the last change to the patch (Ctrl+Z). */
+    undo(): void;
+    /** Redoes the last undone change (Ctrl+Shift+Z, Ctrl+Y). */
+    redo(): void;
 }
 
 let counter = 0;
@@ -148,31 +152,70 @@ const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
     return false;
 };
 
+/** A state of the patch in the undo history: only what lasts, without animations or selection. */
+interface Snapshot {
+    nodes: ModuleNode[];
+    edges: CableEdge[];
+}
+
+/** Most undo steps kept. */
+const HISTORY_MAX = 100;
+/** Changes to the same slider or text closer than this (ms) make a single undo step. */
+const COALESCE_MS = 800;
+
+const snapshot = ({ nodes, edges }: Snapshot): Snapshot => ({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    nodes: nodes.filter((n) => !n.data.removing).map(({ selected, dragging, resizing, ...n }) => n),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    edges: edges.filter(isLive).map(({ selected, ...e }) => e),
+});
+
 /** Patch restored from the browser, otherwise the example patch. */
 const restored = loadPatch() ?? examplePatch();
 
-export const useGraph = create<GraphState>((set, get) => ({
-    nodes: restored.nodes,
-    edges: restored.edges,
-    grab: null,
+export const useGraph = create<GraphState>((set, get) => {
+    // ——— Undo history ———
+    const past: Snapshot[] = [];
+    const future: Snapshot[] = [];
+    let last = { key: "", at: 0 };
+    /** A block is being dragged or a Comment resized: the whole gesture is one undo step. */
+    let gesture = false;
+    /** Falls still to come from a "clear everything" cascade, cancelled by undo/redo. */
+    let pendingFalls: { id: string; timer: ReturnType<typeof setTimeout> }[] = [];
 
-    onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
-    onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
+    /**
+     * Saves the current patch as an undo step, before a change. With a `key` (a slider or a text),
+     * changes that follow each other quickly on the same key make a single step.
+     */
+    const record = (key = "") => {
+        const now = performance.now();
+        const merge = key !== "" && key === last.key && now - last.at < COALESCE_MS;
+        last = { key, at: now };
+        if (merge) return;
+        past.push(snapshot(get()));
+        if (past.length > HISTORY_MAX) past.shift();
+        future.length = 0;
+    };
 
-    startGrab(grab) {
-        const node = get().nodes.find((n) => n.id === grab.nodeId);
-        const kind = node && portKind(node.data.type, grab.handleId, grab.side === "source" ? "out" : "in", node.data.params);
-        const plugged = get().edges.some((e) => isLive(e) && attachedTo(e, grab));
-        set({ grab: { ...grab, kind, plugged } });
-    },
+    /** Moves one step from `from` to `to` (undo: past → future, redo: future → past). */
+    const restore = (from: Snapshot[], to: Snapshot[]) => {
+        const target = from.pop();
+        if (!target) return;
+        // Mid "clear everything": the step to come back to is the cleared mat, not the half-fallen one.
+        const pending = new Set(pendingFalls.map((f) => f.id));
+        pendingFalls.forEach((f) => clearTimeout(f.timer));
+        pendingFalls = [];
+        const current = snapshot(get());
+        to.push({
+            nodes: current.nodes.filter((n) => !pending.has(n.id)),
+            edges: current.edges.filter((e) => !pending.has(e.source) && !pending.has(e.target)),
+        });
+        last = { key: "", at: 0 };
+        set({ nodes: target.nodes, edges: target.edges, grab: null });
+    };
 
-    endGrab(droppedInVoid) {
-        const { grab } = get();
-        set({ grab: null });
-        if (grab?.plugged && droppedInVoid) get().unplug(grab);
-    },
-
-    unplug(grab) {
+    /** Unplugs a socket's cables: they fall, then disappear. */
+    const unplug = (grab: Grab) => {
         const ids = new Set(get().edges.filter((e) => isLive(e) && attachedTo(e, grab)).map((e) => e.id));
         if (!ids.size) return;
         // The cable stays visible while it falls, but is no longer "live" for the audio engine.
@@ -181,92 +224,14 @@ export const useGraph = create<GraphState>((set, get) => ({
                 ids.has(e.id) ? { ...e, selectable: false, data: { ...e.data!, dropping: grab.side } } : e,
             ),
         });
-        setTimeout(() => set({ edges: get().edges.filter((e) => !ids.has(e.id)) }), DROP_MS);
-    },
+        // Only the cables still falling: an undo may have brought them back in the meantime.
+        setTimeout(() => set({ edges: get().edges.filter((e) => !(ids.has(e.id) && e.data?.dropping)) }), DROP_MS);
+    };
 
-    isValidConnection(connection) {
-        const nodes = get().nodes.filter((n) => !n.data.removing);
-        const edges = get().edges.filter(isLive);
-        const { source, target, sourceHandle, targetHandle } = connection;
-        if (!source || !target || source === target) return false;
-        const src = nodes.find((n) => n.id === source);
-        const dst = nodes.find((n) => n.id === target);
-        if (!src || !dst) return false;
-        const outKind = portKind(src.data.type, sourceHandle ?? "", "out", src.data.params);
-        const inKind = portKind(dst.data.type, targetHandle ?? "", "in", dst.data.params);
-        if (!outKind || !inKind || !compatible(outKind, inKind)) return false;
-        const duplicate = edges.some(
-            (e) =>
-                e.source === source &&
-                e.target === target &&
-                e.sourceHandle === sourceHandle &&
-                e.targetHandle === targetHandle,
-        );
-        return !duplicate && !reaches(edges, target, source);
-    },
-
-    onConnect(connection) {
-        if (!get().isValidConnection(connection)) return;
-        const src = get().nodes.find((n) => n.id === connection.source)!;
-        const kind = portKind(src.data.type, connection.sourceHandle ?? "", "out")!;
-        set({
-            edges: addEdge<CableEdge>({ ...connection, id: newId("cable"), type: "cable", data: { kind } }, get().edges),
-        });
-    },
-
-    addModule: (type, position) => {
-        const nodes = get().nodes;
-        // A Comment lands where it is dropped, even over blocks (it goes behind them).
-        const at = type === "comment" ? position : freeSpot(nodes, position);
-        set({ nodes: [...nodes, makeNode(type, at)] });
-    },
-
-    setParam: (nodeId, paramId, value) =>
-        set({
-            nodes: get().nodes.map((n) =>
-                n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
-            ),
-        }),
-
-    setRows(nodeId, rows) {
-        const node = get().nodes.find((n) => n.id === nodeId);
-        const def = node && registry[node.data.type];
-        if (!node || !def?.rows) return;
-        const count = Math.round(Math.min(def.rows.max, Math.max(def.rows.min, rows)));
-        if (count === node.data.params[def.rows.param]) return;
-        get().setParam(nodeId, def.rows.param, count);
-        // Cables plugged into a row that just disappeared come loose on this block's side.
-        const params = get().nodes.find((n) => n.id === nodeId)!.data.params;
-        for (const e of get().edges.filter(isLive)) {
-            if (e.source === nodeId && !portKind(def.type, e.sourceHandle ?? "out", "out", params))
-                get().unplug({ nodeId, handleId: e.sourceHandle ?? "out", side: "source" });
-            if (e.target === nodeId && !portKind(def.type, e.targetHandle ?? "in", "in", params))
-                get().unplug({ nodeId, handleId: e.targetHandle ?? "in", side: "target" });
-        }
-    },
-
-    setText: (nodeId, text) =>
-        set({ nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)) }),
-
-    loadExample(id) {
-        // The audio engine computes the diff: old blocks are disposed, new ones created.
-        set(examplePatch(id));
-    },
-
-    clearAll() {
-        // Blocks fall one after the other, from left to right.
-        const ids = get()
-            .nodes.filter((n) => !n.data.removing)
-            .sort((a, b) => a.position.x - b.position.x)
-            .map((n) => n.id);
-        const gap = CLEAR_TOTAL_MS / Math.max(1, ids.length);
-        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * gap));
-    },
-
-    removeNode(nodeId) {
+    /** A block falls and fades out; its cables come loose on its side and fall too. */
+    const drop = (nodeId: string) => {
         const node = get().nodes.find((n) => n.id === nodeId);
         if (!node || node.data.removing) return;
-        // The block falls and fades out; its cables come loose on its side and fall too.
         // For the audio engine, it is already removed.
         set({
             nodes: get().nodes.map((n) =>
@@ -280,16 +245,175 @@ export const useGraph = create<GraphState>((set, get) => ({
                     : e,
             ),
         });
+        // Only remove what is still falling: an undo may have brought the block back.
         setTimeout(
             () =>
                 set({
-                    nodes: get().nodes.filter((n) => n.id !== nodeId),
-                    edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+                    nodes: get().nodes.filter((n) => !(n.id === nodeId && n.data.removing)),
+                    edges: get().edges.filter((e) => !(e.data?.dropping && (e.source === nodeId || e.target === nodeId))),
                 }),
             DROP_MS,
         );
-    },
-}));
+    };
+
+    return {
+        nodes: restored.nodes,
+        edges: restored.edges,
+        grab: null,
+
+        onNodesChange(changes) {
+            // Dragging blocks or resizing a Comment: one undo step per gesture.
+            const moving = changes.some((c) => (c.type === "position" && c.dragging) || (c.type === "dimensions" && c.resizing));
+            const ending = changes.some(
+                (c) => (c.type === "position" && c.dragging === false) || (c.type === "dimensions" && c.resizing === false),
+            );
+            if (moving && !gesture) record();
+            if (moving) gesture = true;
+            if (ending) gesture = false;
+            set({ nodes: applyNodeChanges(changes, get().nodes) });
+        },
+
+        onEdgesChange(changes) {
+            if (changes.some((c) => c.type === "remove")) record("delete");
+            set({ edges: applyEdgeChanges(changes, get().edges) });
+        },
+
+        startGrab(grab) {
+            const node = get().nodes.find((n) => n.id === grab.nodeId);
+            const kind = node && portKind(node.data.type, grab.handleId, grab.side === "source" ? "out" : "in", node.data.params);
+            const plugged = get().edges.some((e) => isLive(e) && attachedTo(e, grab));
+            set({ grab: { ...grab, kind, plugged } });
+        },
+
+        endGrab(droppedInVoid) {
+            const { grab } = get();
+            set({ grab: null });
+            if (grab?.plugged && droppedInVoid) get().unplug(grab);
+        },
+
+        unplug(grab) {
+            if (!get().edges.some((e) => isLive(e) && attachedTo(e, grab))) return;
+            record();
+            unplug(grab);
+        },
+
+        isValidConnection(connection) {
+            const nodes = get().nodes.filter((n) => !n.data.removing);
+            const edges = get().edges.filter(isLive);
+            const { source, target, sourceHandle, targetHandle } = connection;
+            if (!source || !target || source === target) return false;
+            const src = nodes.find((n) => n.id === source);
+            const dst = nodes.find((n) => n.id === target);
+            if (!src || !dst) return false;
+            const outKind = portKind(src.data.type, sourceHandle ?? "", "out", src.data.params);
+            const inKind = portKind(dst.data.type, targetHandle ?? "", "in", dst.data.params);
+            if (!outKind || !inKind || !compatible(outKind, inKind)) return false;
+            const duplicate = edges.some(
+                (e) =>
+                    e.source === source &&
+                    e.target === target &&
+                    e.sourceHandle === sourceHandle &&
+                    e.targetHandle === targetHandle,
+            );
+            return !duplicate && !reaches(edges, target, source);
+        },
+
+        onConnect(connection) {
+            if (!get().isValidConnection(connection)) return;
+            const src = get().nodes.find((n) => n.id === connection.source)!;
+            const kind = portKind(src.data.type, connection.sourceHandle ?? "", "out")!;
+            record();
+            set({
+                edges: addEdge<CableEdge>({ ...connection, id: newId("cable"), type: "cable", data: { kind } }, get().edges),
+            });
+        },
+
+        addModule: (type, position) => {
+            const nodes = get().nodes;
+            // A Comment lands where it is dropped, even over blocks (it goes behind them).
+            const at = type === "comment" ? position : freeSpot(nodes, position);
+            record();
+            set({ nodes: [...nodes, makeNode(type, at)] });
+        },
+
+        setParam(nodeId, paramId, value) {
+            const node = get().nodes.find((n) => n.id === nodeId);
+            if (!node || node.data.params[paramId] === value) return;
+            // A slider drag is one undo step; a click (a sequencer step, a choice) is one step each.
+            const def = registry[node.data.type]?.params.find((p) => p.id === paramId);
+            record(def && !def.hidden && !def.options ? `${nodeId}:${paramId}` : "");
+            set({
+                nodes: get().nodes.map((n) =>
+                    n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
+                ),
+            });
+        },
+
+        setRows(nodeId, rows) {
+            const node = get().nodes.find((n) => n.id === nodeId);
+            const def = node && registry[node.data.type];
+            if (!node || !def?.rows) return;
+            const count = Math.round(Math.min(def.rows.max, Math.max(def.rows.min, rows)));
+            if (count === node.data.params[def.rows.param]) return;
+            // Dragging the grip over several rows is a single undo step.
+            record(`${nodeId}:rows`);
+            const param = def.rows.param;
+            set({
+                nodes: get().nodes.map((n) =>
+                    n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [param]: count } } } : n,
+                ),
+            });
+            // Cables plugged into a row that just disappeared come loose on this block's side.
+            const params = get().nodes.find((n) => n.id === nodeId)!.data.params;
+            for (const e of get().edges.filter(isLive)) {
+                if (e.source === nodeId && !portKind(def.type, e.sourceHandle ?? "out", "out", params))
+                    unplug({ nodeId, handleId: e.sourceHandle ?? "out", side: "source" });
+                if (e.target === nodeId && !portKind(def.type, e.targetHandle ?? "in", "in", params))
+                    unplug({ nodeId, handleId: e.targetHandle ?? "in", side: "target" });
+            }
+        },
+
+        setText(nodeId, text) {
+            record(`${nodeId}:text`);
+            set({ nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)) });
+        },
+
+        loadExample(id) {
+            record();
+            // The audio engine computes the diff: old blocks are disposed, new ones created.
+            set(examplePatch(id));
+        },
+
+        undo: () => restore(past, future),
+        redo: () => restore(future, past),
+
+        clearAll() {
+            // Blocks fall one after the other, from left to right.
+            const ids = get()
+                .nodes.filter((n) => !n.data.removing)
+                .sort((a, b) => a.position.x - b.position.x)
+                .map((n) => n.id);
+            if (!ids.length) return;
+            record();
+            const gap = CLEAR_TOTAL_MS / ids.length;
+            pendingFalls = ids.map((id, i) => ({
+                id,
+                timer: setTimeout(() => {
+                    pendingFalls = pendingFalls.filter((f) => f.id !== id);
+                    drop(id);
+                }, i * gap),
+            }));
+        },
+
+        removeNode(nodeId) {
+            const node = get().nodes.find((n) => n.id === nodeId);
+            if (!node || node.data.removing) return;
+            // Deleting a selection removes several blocks at once: a single undo step.
+            record("delete");
+            drop(nodeId);
+        },
+    };
+});
 
 // Every change to the patch is saved in the browser.
 useGraph.subscribe((state, prev) => {

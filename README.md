@@ -16,6 +16,7 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 - **More rows**: drag the grip on the bottom edge of a Sequencer or Mixer to add or remove rows (up to 16).
 - **Stay organized**: the Comment block is a resizable frame with some text, to name the parts of a composition. Move it by its ⠿ grip; clicks elsewhere in the frame go through to the mat and the blocks.
 - **Presets**: hold the big cross in the top right for 2 seconds to clear the mat, then "Load a preset" offers Soft, Groove and Metal.
+- **Undo**: Ctrl+Z undoes the last change (a cable pulled out by mistake, a deleted block, a moved slider…), Ctrl+Shift+Z or Ctrl+Y redoes it. Cmd on a Mac.
 - Your patch is saved automatically in the browser.
 
 ## Run locally

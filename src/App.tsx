@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     Background,
     BackgroundVariant,
@@ -17,6 +17,28 @@ import { ClearButton } from "./components/ClearButton";
 import { EmptyMat } from "./components/EmptyMat";
 
 const nodeTypes = { module: ModuleBlock };
+
+/** Typing in a text field: its own undo applies, not the patch's. */
+const isTyping = (target: EventTarget | null) =>
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLInputElement && target.type !== "range") ||
+    (target instanceof HTMLElement && target.isContentEditable);
+
+/** Ctrl+Z undoes the last change to the patch; Ctrl+Shift+Z (or Ctrl+Y) redoes it. Cmd on a Mac. */
+function useUndoKeys() {
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || isTyping(e.target)) return;
+            const key = e.key.toLowerCase();
+            if (key === "z" && !e.shiftKey) useGraph.getState().undo();
+            else if ((key === "z" && e.shiftKey) || key === "y") useGraph.getState().redo();
+            else return;
+            e.preventDefault();
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, []);
+}
 const edgeTypes = { cable: CableEdge };
 
 /** Cable "in hand" while pulling: a slightly sagging curve. */
@@ -38,6 +60,7 @@ function Workbench() {
     const grabbing = grab?.kind ? `${grab.side === "source" ? "out" : "in"}-${grab.kind}` : undefined;
     const { screenToFlowPosition } = useReactFlow();
     const [started, setStarted] = useState(engine.isRunning);
+    useUndoKeys();
 
     const mat = useRef<HTMLElement>(null);
 

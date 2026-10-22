@@ -23,6 +23,8 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 **Variable rows**: a `ModuleDef` with `rows` (Sequencer, Mixer) stores its row count in a hidden setting, changed by dragging `RowResizer` on the block's bottom edge. Sockets and settings tagged with a `row` beyond that count are hidden, and `portKind(…, params)` treats them as missing; `setRows` unplugs the cables on removed rows.
 
+**Undo**: `graph.ts` keeps a history of patch snapshots (`undo`/`redo`, up to 100 steps). Every action that changes the patch calls `record()` *before* changing it; slider drags, text typing, row resizing and block drags are merged into one step (a `key` or a gesture flag). Fall animations only remove blocks and cables that are still falling, so an undo during a fall wins.
+
 **Comment**: a `comment` node with no sound or sockets, rendered by `CommentBlock` behind blocks and cables (`zIndex: -1`, `elevateNodesOnSelect={false}`), resizable with `NodeResizer`. It only moves by its grip (`dragHandle`), and the frame itself lets the pointer through to the mat and the blocks.
 
 ## Checking

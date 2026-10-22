@@ -163,10 +163,14 @@ export interface Example {
     build(): Patch;
 }
 
-/** Modèles proposés au chargement ; le premier est celui de la première visite. */
+/** Modèles proposés au chargement, dans l'ordre du menu. */
 export const EXAMPLES: Example[] = [
-    { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
     { id: "soft", label: "Doux", description: "Un séquenceur, un oscillateur, une note calme : idéal pour démarrer", build: softPatch },
+    { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
 ];
 
-export const examplePatch = (id = EXAMPLES[0].id): Patch => (EXAMPLES.find((e) => e.id === id) ?? EXAMPLES[0]).build();
+/** Modèle chargé à la toute première visite. */
+const FIRST_VISIT = "groove";
+
+export const examplePatch = (id = FIRST_VISIT): Patch =>
+    (EXAMPLES.find((e) => e.id === id) ?? EXAMPLES[0]).build();

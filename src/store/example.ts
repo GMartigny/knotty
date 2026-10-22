@@ -165,9 +165,10 @@ function softPatch(): Patch {
  *
  * Groupe (séquenceur « groupe ») — piste 1 : guitare rythmique, power chord Mi + Si en dents de scie,
  * « chug » étouffé calé sur la double pédale, très distordu puis filtré comme un baffle ;
- * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : guitare solo — une Gamme mineure
- * pentatonique en Mi, balayée par un triangle lent, donne des phrases qui montent et redescendent ;
- * attaques nettes, à peine liées, léger vibrato ; très distordu et filtré comme un baffle, écho discret.
+ * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : deux guitares solo en harmonie —
+ * un triangle lent balaie deux Gammes : Mi mineur pour la première, Sol majeur (mêmes notes, décalées
+ * d'un cran) pour la seconde, qui joue donc une tierce au-dessus, comme des guitares jumelles.
+ * Attaques nettes, à peine liées, léger vibrato ; très distordu et filtré comme un baffle, écho discret.
  *
  * Mixeur général → réverb discrète → sortie.
  */
@@ -183,6 +184,7 @@ function metalPatch(): Patch {
     const cBus = 2300;
     const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
     const dry = { attack: 0.001, sustain: 0, hold: 0.005 };
+    const HARM_Y = 3700;
 
     const nodes: ModuleNode[] = [
         // ——— Batterie ———
@@ -225,9 +227,9 @@ function metalPatch(): Patch {
         node("bass-filter", "filter", cFx1, 2440, { mode: 0, frequency: 500, Q: 2 }),
 
         // ——— Guitare solo ———
-        // Phrases qui montent et redescendent, en pentatonique mineure de Mi, de Mi3 à Mi5.
+        // Phrases qui montent et redescendent, en Mi mineur, de Mi3 à Mi5.
         node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 2, frequency: 0.3 }),
-        node("lead-scale", "scale", cSeq, 2920, { scale: 2, root: 2, octave: 0 }),
+        node("lead-scale", "scale", cSeq, 2920, { scale: 1, root: 2, octave: 0 }),
         // Glissé très court : lie les notes sans l'effet « sirène ».
         node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330, glide: 0.015 }),
         node("vibrato", "sine", cSeq - 340, 3330, { shape: 0, frequency: 6 }),
@@ -238,9 +240,15 @@ function metalPatch(): Patch {
         node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.3, wet: 0.2 }),
         // Filtré bas, comme le baffle d'un ampli : retire le grésillement aigu.
         node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 2600, Q: 1.8 }),
+        // Seconde guitare : Sol majeur a les mêmes notes que Mi mineur, décalées d'un degré,
+        // donc pour un même signal elle joue la tierce au-dessus de la première.
+        node("harm-scale", "scale", cSeq, HARM_Y, { scale: 0, root: 4, octave: 0 }),
+        node("harm-osc", "sine", cSrc, HARM_Y, { shape: 3, frequency: 392, glide: 0.015 }),
+        node("harm-env", "envelope", cEnv, HARM_Y, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
+        node("harm-dist", "distortion", cFx1, HARM_Y, { drive: 45, wet: 1 }),
 
         // ——— Mixage ———
-        node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 55 }),
+        node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 45 }),
         node("reverb", "reverb", cBus + 300, 1720, { decay: 1.8, wet: 0.15 }),
         node("out", "output", cBus + 600, 1780),
     ];
@@ -286,6 +294,15 @@ function metalPatch(): Patch {
         cable("lead-env", "out", "lead-dist", "in"),
         cable("lead-dist", "out", "lead-echo", "in"),
         cable("lead-echo", "out", "lead-filter", "in"),
+        // Seconde guitare, en harmonie : même balayage, même rythme, même vibrato, même écho.
+        cable("lead-sweep", "out", "harm-scale", "in"),
+        cable("band", "row2", "harm-scale", "gate", "trigger"),
+        cable("harm-scale", "out", "harm-osc", "note", "trigger"),
+        cable("harm-scale", "out", "harm-env", "gate", "trigger"),
+        cable("vibrato-depth", "out", "harm-osc", "mod:frequency"),
+        cable("harm-osc", "out", "harm-env", "in"),
+        cable("harm-env", "out", "harm-dist", "in"),
+        cable("harm-dist", "out", "lead-echo", "in"),
 
         // Mixage
         cable("drum-mix", "out", "bus", "in1"),

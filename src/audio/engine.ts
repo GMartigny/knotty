@@ -1,4 +1,5 @@
 import * as Tone from "tone";
+import { startClock } from "./clock";
 import { registry } from "../modules/registry";
 import { modParamOf, SOURCE_LEVEL, type ModuleInstance, type ParamValues } from "../modules/types";
 import { useGraph, type CableEdge, type ModuleNode } from "../store/graph";
@@ -43,6 +44,8 @@ class AudioEngine {
     private running = false;
 
     constructor() {
+        // Horloge des séquenceurs créée tout de suite, transport arrêté et tempo stable.
+        startClock();
         const { nodes, edges } = useGraph.getState();
         this.sync(nodes, edges);
         useGraph.subscribe((state, prev) => {

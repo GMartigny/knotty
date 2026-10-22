@@ -1,4 +1,5 @@
 import * as Tone from "tone";
+import { onSixteenth } from "../audio/clock";
 import type { ModuleDef, ParamDef, TriggerListener } from "./types";
 
 export const SEQ_ROWS = 4;
@@ -51,15 +52,15 @@ export const sequencer: ModuleDef = {
         const listeners = Array.from({ length: SEQ_ROWS }, () => new Set<TriggerListener>());
         let current = -1;
 
-        // Le pas est déduit de la position du transport : plusieurs séquenceurs restent calés entre eux.
-        const sixteenth = Tone.Time("16n").toTicks();
-        const id = transport.scheduleRepeat((time) => {
-            const step = Math.round(transport.getTicksAtTime(time) / sixteenth) % SEQ_STEPS;
+        // Abonnement à l'horloge commune : le pas est déduit de la position du transport,
+        // donc tous les séquenceurs restent calés entre eux, et un nouveau démarre au pas suivant.
+        const unsubscribe = onSixteenth((time, n) => {
+            const step = n % SEQ_STEPS;
             for (let row = 0; row < SEQ_ROWS; row++) {
                 if (isStepOn(patterns[row], step)) for (const fn of listeners[row]) fn(time);
             }
             Tone.getDraw().schedule(() => (current = step), time);
-        }, "16n");
+        });
 
         return {
             input: () => undefined,
@@ -76,7 +77,7 @@ export const sequencer: ModuleDef = {
             },
             position: () => current,
             dispose: () => {
-                transport.clear(id);
+                unsubscribe();
                 listeners.forEach((set) => set.clear());
             },
         };

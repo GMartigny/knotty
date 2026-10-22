@@ -167,7 +167,7 @@ function softPatch(): Patch {
  * « chug » étouffé calé sur la double pédale, très distordu puis filtré comme un baffle ;
  * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : guitare solo — une Gamme mineure
  * pentatonique en Mi, balayée par un triangle lent, donne des phrases qui montent et redescendent ;
- * notes tenues et glissées, vibrato par un sinus à 5 Hz atténué ; distorsion filtrée comme un baffle, écho.
+ * attaques nettes, à peine liées, léger vibrato ; très distordu et filtré comme un baffle, écho discret.
  *
  * Mixeur général → réverb discrète → sortie.
  */
@@ -228,14 +228,14 @@ function metalPatch(): Patch {
         // Phrases qui montent et redescendent, en pentatonique mineure de Mi, de Mi3 à Mi5.
         node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 2, frequency: 0.3 }),
         node("lead-scale", "scale", cSeq, 2920, { scale: 2, root: 2, octave: 0 }),
-        // Le glissé entre les notes évite le côté « 8-bit » des sauts nets.
-        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330, glide: 0.06 }),
-        node("vibrato", "sine", cSeq - 340, 3330, { shape: 0, frequency: 5 }),
-        // Ampleur du vibrato : −28 dB ≈ ±4 % (un peu moins d'un demi-ton).
-        node("vibrato-depth", "volume", cSeq, 3350, { volume: -28 }),
-        node("lead-env", "envelope", cEnv, 2880, { attack: 0.015, decay: 0.3, sustain: 0.75, hold: 0.22, release: 0.35 }),
-        node("lead-dist", "distortion", cFx1, 2940, { drive: 32, wet: 1 }),
-        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.4, wet: 0.35 }),
+        // Glissé très court : lie les notes sans l'effet « sirène ».
+        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330, glide: 0.015 }),
+        node("vibrato", "sine", cSeq - 340, 3330, { shape: 0, frequency: 6 }),
+        // Ampleur du vibrato : −40 dB ≈ ±1 %, juste de quoi faire vivre les notes tenues.
+        node("vibrato-depth", "volume", cSeq, 3350, { volume: -40 }),
+        node("lead-env", "envelope", cEnv, 2880, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
+        node("lead-dist", "distortion", cFx1, 2940, { drive: 45, wet: 1 }),
+        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.3, wet: 0.2 }),
         // Filtré bas, comme le baffle d'un ampli : retire le grésillement aigu.
         node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 2600, Q: 1.8 }),
 

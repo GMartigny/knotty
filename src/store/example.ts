@@ -36,7 +36,8 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
  * "Groove" patch: a little tune on a 5-row sequencer.
  *  1. Kick — low sine, short envelope, on the beats
  *  2. Snare — noise, envelope, band-pass, beats 2 and 4
- *  3. Hi-hat — the same noise, very short envelope, high-pass, on the offbeats
+ *  3. Hi-hat — the same noise, very short envelope, high-pass, on the offbeats; a Random block
+ *     rolled on each hit moves the filter a little, so no two hits sound quite the same
  *  4. Bass — sawtooth, envelope, low-pass swept by a slow oscillator
  *  5. Melody — a triangle around 800 Hz whose pitch is swayed by a slow sine
  *     (attenuated by a Volume), so each note lands on a different pitch
@@ -53,7 +54,7 @@ function groovePatch(): Patch {
 
     const nodes: ModuleNode[] = [
         // Comment frames, to find your way around
-        note("note-drums", -40, -70, 1360, 1420, "Drums: kick, snare and hi-hat (sequencer rows 1 to 3)"),
+        note("note-drums", -40, -70, 1360, 1420, "Drums: kick, snare and hi-hat (rows 1 to 3). A die makes every hi-hat hit a little different"),
         note("note-bass", 420, 1360, 900, 710, "Bass (row 4), its filter swept by a slow oscillator"),
         note("note-melody", -200, MEL_Y - 90, 1220, 520, "Melody (row 5): a triangle whose pitch is swayed by a slow sine"),
         note("note-mix", 1340, 730, 900, 360, "Mix: every track → reverb → output"),
@@ -79,6 +80,10 @@ function groovePatch(): Patch {
         node("snare-filter", "filter", colFilter, row(1) + 60, { mode: 2, frequency: 1700, Q: 1.2 }),
         node("hat-env", "envelope", colEnv, row(2), { ...shortHit, decay: 0.03, release: 0.02 }),
         node("hat-filter", "filter", colFilter, row(2) + 60, { mode: 1, frequency: 7000, Q: 0.8 }),
+        // A die rolled on every hi-hat hit nudges its filter: some hits brighter, some duller.
+        node("hat-dice", "random", 0, row(2) + 160, { values: 6 }),
+        // Depth: −12 dB ≈ ±25% around 7 kHz.
+        node("hat-dice-depth", "volume", 250, row(2) + 160, { volume: -12 }),
 
         // 4. Bass swept by a slow oscillator
         node("bass-osc", "sine", colSource, row(3) + 20, { shape: 3, frequency: 55 }),
@@ -117,6 +122,9 @@ function groovePatch(): Patch {
         cable("noise", "out", "hat-env", "in"),
         cable("hat-env", "out", "hat-filter", "in"),
         cable("hat-filter", "out", "mix", "in3"),
+        cable("seq", "row2", "hat-dice", "gate", "trigger"),
+        cable("hat-dice", "out", "hat-dice-depth", "in"),
+        cable("hat-dice-depth", "out", "hat-filter", "mod:frequency"),
 
         cable("bass-osc", "out", "bass-env", "in"),
         cable("bass-env", "out", "bass-filter", "in"),

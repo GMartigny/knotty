@@ -11,6 +11,7 @@ import {
     type XYPosition,
 } from "@xyflow/react";
 import { compatible, portKind, registry } from "../modules/registry";
+import { loadPatch, savePatch } from "./persist";
 import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
 
 export interface ModuleData extends Record<string, unknown> {
@@ -163,9 +164,12 @@ const reaches = (edges: CableEdge[], from: string, to: string): boolean => {
     return false;
 };
 
+/** Patch restauré depuis le navigateur, sinon le patch d'exemple. */
+const restored = loadPatch() ?? { nodes: initialNodes, edges: initialEdges };
+
 export const useGraph = create<GraphState>((set, get) => ({
-    nodes: initialNodes,
-    edges: initialEdges,
+    nodes: restored.nodes,
+    edges: restored.edges,
     grab: null,
 
     onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
@@ -274,3 +278,8 @@ export const useGraph = create<GraphState>((set, get) => ({
         );
     },
 }));
+
+// Chaque modification du patch est enregistrée dans le navigateur.
+useGraph.subscribe((state, prev) => {
+    if (state.nodes !== prev.nodes || state.edges !== prev.edges) savePatch(state.nodes, state.edges);
+});

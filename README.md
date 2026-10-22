@@ -15,6 +15,7 @@ npm run dev
 - **`src/audio/engine.ts`** : s'abonne au store et applique les différences au graphe Tone.js (création, `connect`, `disconnect`, `dispose`).
 - **`src/modules/`** : un fichier par type de bloc (ports, réglages, création des nœuds Tone). Ajouter un bloc = un fichier + une ligne dans `registry.ts`.
 - **`src/cables/`** : câbles en corde Verlet. Le nombre de points dépend de la longueur (un tous les ~16 px, entre 8 et 40, pour que les extrémités restent souples). Une seule boucle `requestAnimationFrame` anime tous les câbles et s'arrête quand tout est immobile ; les chemins SVG sont écrits directement dans le DOM, sans re-render React.
+- **`src/store/persist.ts`** : le patch (blocs, positions, réglages, câbles) est enregistré dans le `localStorage` 300 ms après chaque modification et restauré à l'ouverture. Au chargement, il est nettoyé pour la version actuelle : blocs inconnus ignorés, réglages complétés par leurs valeurs par défaut, câbles vers des prises disparues retirés.
 - **`src/audio/levels.ts`** : niveau de sortie de chaque bloc, exposé en variable CSS `--level` pour les lueurs.
 
 Les câbles sont typés `audio` ou `trigger` ; les connexions incompatibles et les boucles sont refusées. Le cœur de chaque prise donne sa couleur (orange = son, jaune = déclencheur) et, pendant un tirage, seules les prises compatibles s'allument.
@@ -30,4 +31,4 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 3. ~~Oscillateur (sinus, carré, triangle, scie) avec mini-oscilloscope~~, débrancher un câble en tirant depuis sa prise
 4. ~~Enveloppe ADSR, Volume, Mixeur 4 voies, prises de modulation sur les curseurs~~, Delay, Distorsion
 5. Impulsions lumineuses le long des câbles
-6. Sauvegarde locale, partage par URL
+6. ~~Sauvegarde locale~~, partage par URL

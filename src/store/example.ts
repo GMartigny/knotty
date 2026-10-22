@@ -130,23 +130,17 @@ function groovePatch(): Patch {
  * Patch « Doux » : un point de départ simple et calme.
  * Une note de triangle à 330 Hz, découpée par une enveloppe aux attaques et relâchements doux,
  * adoucie par un passe-bas et noyée dans la réverb, sur un rythme lent et clairsemé.
- * Un Clavier est déjà branché : il change la note de l'oscillateur et déclenche l'enveloppe.
- * Une seconde voix — un sinus à 495 Hz (la quinte au-dessus) en clochette — répond sur la piste 2.
  */
 function softPatch(): Patch {
     const nodes: ModuleNode[] = [
-        node("seq", "sequencer", -120, 330, {
+        node("seq", "sequencer", -120, 360, {
             bpm: 84,
             row0: steps(1, 7, 11),
-            row1: steps(4, 14),
+            row1: 0,
             row2: 0,
             row3: 0,
         }),
         node("osc", "sine", 60, 0, { shape: 2, frequency: 330 }),
-        // Seconde voix : clochette une quinte au-dessus
-        node("osc2", "sine", 60, -380, { shape: 0, frequency: 495 }),
-        node("env2", "envelope", 380, -470, { attack: 0.008, decay: 0.8, sustain: 0, hold: 0.02, release: 1.4 }),
-        node("keys", "keyboard", -120, 600, { octave: 2 }),
         node("env", "envelope", 380, 0, { attack: 0.03, decay: 0.5, sustain: 0.2, hold: 0.15, release: 0.9 }),
         node("filter", "filter", 680, 40, { mode: 0, frequency: 1200, Q: 1 }),
         node("reverb", "reverb", 980, 60, { decay: 4, wet: 0.45 }),
@@ -154,11 +148,6 @@ function softPatch(): Patch {
     ];
     const edges: CableEdge[] = [
         cable("seq", "row0", "env", "gate", "trigger"),
-        cable("seq", "row1", "env2", "gate", "trigger"),
-        cable("osc2", "out", "env2", "in"),
-        cable("env2", "out", "filter", "in"),
-        cable("keys", "out", "osc", "note", "trigger"),
-        cable("keys", "out", "env", "gate", "trigger"),
         cable("osc", "out", "env", "in"),
         cable("env", "out", "filter", "in"),
         cable("filter", "out", "reverb", "in"),
@@ -177,7 +166,7 @@ export interface Example {
 /** Modèles proposés au chargement ; le premier est celui de la première visite. */
 export const EXAMPLES: Example[] = [
     { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
-    { id: "soft", label: "Doux", description: "Une note calme et un clavier à jouer, idéal pour démarrer", build: softPatch },
+    { id: "soft", label: "Doux", description: "Un séquenceur, un oscillateur, une note calme : idéal pour démarrer", build: softPatch },
 ];
 
 export const examplePatch = (id = EXAMPLES[0].id): Patch => (EXAMPLES.find((e) => e.id === id) ?? EXAMPLES[0]).build();

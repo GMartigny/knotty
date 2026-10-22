@@ -45,8 +45,11 @@ export interface Grab {
 /** Durée de la chute d'un câble débranché avant qu'il disparaisse, en ms. */
 export const DROP_MS = 700;
 
-/** Écart entre la chute de deux blocs quand on efface tout, en ms. */
-const CLEAR_STAGGER_MS = 180;
+/**
+ * Durée de la cascade quand on efface tout, en ms, quel que soit le nombre de blocs :
+ * l'écart entre deux chutes est cette durée divisée par le nombre de blocs (10 blocs → 100 ms).
+ */
+const CLEAR_TOTAL_MS = 1000;
 
 const isLive = (e: CableEdge) => !e.data?.dropping;
 
@@ -225,7 +228,8 @@ export const useGraph = create<GraphState>((set, get) => ({
             .nodes.filter((n) => !n.data.removing)
             .sort((a, b) => a.position.x - b.position.x)
             .map((n) => n.id);
-        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * CLEAR_STAGGER_MS));
+        const gap = CLEAR_TOTAL_MS / Math.max(1, ids.length);
+        ids.forEach((id, i) => setTimeout(() => get().removeNode(id), i * gap));
     },
 
     removeNode(nodeId) {

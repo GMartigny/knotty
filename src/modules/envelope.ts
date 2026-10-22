@@ -16,11 +16,11 @@ export const envelope: ModuleDef = {
     ],
     outputs: [{ id: "out", kind: "audio" }],
     params: [
-        { id: "attack", label: "Attaque", min: 0.001, max: 2, default: 0.01, scale: "log", step: 0.001, unit: "s" },
-        { id: "decay", label: "Déclin", min: 0.01, max: 2, default: 0.2, scale: "log", step: 0.01, unit: "s" },
-        { id: "sustain", label: "Maintien", min: 0, max: 1, default: 0.5, step: 0.01 },
-        { id: "hold", label: "Durée tenue", min: 0.01, max: 2, default: 0.15, scale: "log", step: 0.01, unit: "s" },
-        { id: "release", label: "Relâchement", min: 0.01, max: 4, default: 0.4, scale: "log", step: 0.01, unit: "s" },
+        { id: "attack", label: "Attaque", min: 0.001, max: 2, default: 0.01, scale: "log", step: 0.001, unit: "s", activeWith: "gate" },
+        { id: "decay", label: "Déclin", min: 0.01, max: 2, default: 0.2, scale: "log", step: 0.01, unit: "s", activeWith: "gate" },
+        { id: "sustain", label: "Maintien", min: 0, max: 1, default: 0.5, step: 0.01, activeWith: "gate" },
+        { id: "hold", label: "Durée tenue", min: 0.01, max: 2, default: 0.15, scale: "log", step: 0.01, unit: "s", activeWith: "gate" },
+        { id: "release", label: "Relâchement", min: 0.01, max: 4, default: 0.4, scale: "log", step: 0.01, unit: "s", activeWith: "gate" },
     ],
     create(params) {
         const input = new Tone.Gain(1);

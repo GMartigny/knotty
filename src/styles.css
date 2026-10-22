@@ -216,6 +216,10 @@ button {
     gap: 4px;
 }
 
+.param.is-inactive {
+    opacity: 0.4;
+}
+
 .param-label {
     display: flex;
     justify-content: space-between;

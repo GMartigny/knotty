@@ -101,7 +101,8 @@ const initialEdges: CableEdge[] = [
 
 /** Taille supposée d'un nouveau bloc tant qu'il n'est pas mesuré. */
 const NEW_BLOCK = { width: 240, height: 230 };
-const MARGIN = 24;
+// Assez large pour que les prises de deux blocs voisins ne se touchent pas.
+const MARGIN = 56;
 
 /**
  * Première place libre autour de `wanted`, en tournant en spirale,

@@ -27,6 +27,8 @@ export interface ParamDef {
     options?: string[];
     /** Paramètre stocké mais sans curseur (ex. motifs du séquenceur). */
     hidden?: boolean;
+    /** Le réglage n'a d'effet que si un câble est branché sur cette entrée (ex. "gate"). */
+    activeWith?: string;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output";

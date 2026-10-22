@@ -31,6 +31,14 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
     const removeNode = useGraph((s) => s.removeNode);
     const ref = useRef<HTMLDivElement>(null);
     useLevel(id, ref);
+    // Entrées de ce bloc qui ont au moins un câble branché, sous forme de chaîne stable ("gate,in").
+    const pluggedInputs = useGraph((s) =>
+        s.edges
+            .filter((e) => e.target === id && !e.data?.dropping)
+            .map((e) => e.targetHandle ?? "in")
+            .sort()
+            .join(","),
+    );
 
     if (!def) return null;
 
@@ -55,7 +63,13 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                 {def.params
                     .filter((p) => !p.hidden)
                     .map((p) => (
-                        <ParamControl key={p.id} def={p} value={data.params[p.id]} onChange={(v) => setParam(id, p.id, v)} />
+                        <ParamControl
+                            key={p.id}
+                            def={p}
+                            value={data.params[p.id]}
+                            inactive={!!p.activeWith && !pluggedInputs.split(",").includes(p.activeWith)}
+                            onChange={(v) => setParam(id, p.id, v)}
+                        />
                     ))}
                 {def.type === "sequencer" && (
                     <SequencerGrid nodeId={id} params={data.params} onChange={(param, v) => setParam(id, param, v)} />

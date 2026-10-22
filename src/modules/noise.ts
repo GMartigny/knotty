@@ -16,7 +16,7 @@ export const noise: ModuleDef = {
     outputs: [{ id: "out", kind: "audio" }],
     params: [
         { id: "color", label: "Couleur", min: 0, max: 2, default: 1, options: ["Blanc", "Rose", "Brun"] },
-        { id: "decay", label: "Durée d'un coup", min: 0.02, max: 1.5, default: 0.12, step: 0.01, scale: "log", unit: "s" },
+        { id: "decay", label: "Durée d'un coup", min: 0.02, max: 1.5, default: 0.12, step: 0.01, scale: "log", unit: "s", activeWith: "gate" },
         { id: "volume", label: "Volume", min: -40, max: 0, default: -12, step: 0.5, unit: "dB" },
     ],
     create(params) {
@@ -38,7 +38,8 @@ export const noise: ModuleDef = {
             start: () => {
                 if (source.state !== "started") source.start();
             },
-            trigger: (_port, time) => env.triggerAttackRelease(0.005, time),
+            // Relâcher seulement après l'attaque et le déclin, sinon le déclin n'a pas le temps de jouer.
+            trigger: (_port, time) => env.triggerAttackRelease(Number(env.attack) + Number(env.decay), time),
             setTriggerConnected: (_port, connected) => open.gain.rampTo(connected ? 0 : 1, 0.03),
             dispose: () => {
                 source.dispose();

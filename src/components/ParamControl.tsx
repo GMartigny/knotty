@@ -18,9 +18,11 @@ interface Props {
     def: ParamDef;
     value: number;
     onChange(value: number): void;
+    /** Le réglage reste modifiable mais n'a pas d'effet tant que son entrée n'est pas branchée. */
+    inactive?: boolean;
 }
 
-export function ParamControl({ def, value, onChange }: Props) {
+export function ParamControl({ def, value, onChange, inactive }: Props) {
     if (def.options) {
         return (
             <div className="param">
@@ -45,7 +47,10 @@ export function ParamControl({ def, value, onChange }: Props) {
 
     const t = toSlider(def, value);
     return (
-        <label className="param">
+        <label
+            className={`param ${inactive ? "is-inactive" : ""}`}
+            title={inactive ? "S'entend quand un câble est branché sur le Déclencheur" : undefined}
+        >
             <span className="param-label">
                 {def.label}
                 <output>{format(def, value)}</output>

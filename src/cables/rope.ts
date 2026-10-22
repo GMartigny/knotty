@@ -9,18 +9,18 @@ export interface Vec {
 }
 
 export const ROPE = {
-    /** Espacement visé entre deux points, en px. */
-    spacing: 30,
-    minPoints: 6,
-    maxPoints: 24,
+    /** Espacement visé entre deux points, en px. Plus serré = extrémités plus souples près des prises. */
+    spacing: 16,
+    minPoints: 8,
+    maxPoints: 40,
     /** Longueur de câble par rapport à la distance entre ports (> 1 = le câble pend). */
     slack: 1.12,
     /** Mou minimum en px, pour que les câbles courts pendent un peu aussi. */
     minSlack: 24,
     gravity: 1400,
     /** Amortissement de la vitesse à chaque pas (1 = aucun frottement). */
-    damping: 0.94,
-    iterations: 14,
+    damping: 0.97,
+    iterations: 10,
     /** En dessous de ce déplacement par pas (px), la corde est considérée immobile. */
     sleepThreshold: 0.03,
 };

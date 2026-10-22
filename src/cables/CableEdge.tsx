@@ -24,8 +24,9 @@ export function CableEdge({ id, source, sourceX, sourceY, targetX, targetY, sele
 
     useEffect(() => () => physics.remove(id), [id]);
 
-    // Le câble s'illumine selon le niveau du module qui l'alimente.
-    useLevel(source, group);
+    // Un câble audio s'illumine selon le niveau du module qui l'alimente,
+    // un câble trigger à chaque impulsion qu'il transporte.
+    useLevel(data?.kind === "trigger" ? id : source, group);
 
     const color = KIND_COLOR[data?.kind ?? "audio"];
 

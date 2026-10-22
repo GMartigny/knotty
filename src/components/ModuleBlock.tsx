@@ -4,8 +4,25 @@ import { categoryColor, registry } from "../modules/registry";
 import { useGraph, type ModuleNode } from "../store/graph";
 import { useLevel } from "../audio/levels";
 import { ParamControl } from "./ParamControl";
+import { SequencerGrid } from "./SequencerGrid";
+import type { PortDef } from "../modules/types";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
+
+function Sockets({ ports, side }: { ports: PortDef[]; side: "in" | "out" }) {
+    const placed = ports.filter((p) => !p.inline);
+    return placed.map((port, i) => (
+        <Handle
+            key={port.id}
+            id={port.id}
+            type={side === "in" ? "target" : "source"}
+            position={side === "in" ? Position.Left : Position.Right}
+            className={`socket socket-${port.kind}`}
+            style={{ top: portOffset(i, placed.length) }}
+            title={port.label}
+        />
+    ));
+}
 
 export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const def = registry[data.type];
@@ -19,7 +36,7 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
     return (
         <div
             ref={ref}
-            className={`block ${selected ? "is-selected" : ""}`}
+            className={`block block-${def.type} ${selected ? "is-selected" : ""}`}
             style={{ "--accent": categoryColor[def.category] } as React.CSSProperties}
         >
             <header className="block-head">
@@ -33,31 +50,18 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
             </header>
 
             <div className="block-body">
-                {def.params.map((p) => (
-                    <ParamControl key={p.id} def={p} value={data.params[p.id]} onChange={(v) => setParam(id, p.id, v)} />
-                ))}
+                {def.params
+                    .filter((p) => !p.hidden)
+                    .map((p) => (
+                        <ParamControl key={p.id} def={p} value={data.params[p.id]} onChange={(v) => setParam(id, p.id, v)} />
+                    ))}
+                {def.type === "sequencer" && (
+                    <SequencerGrid nodeId={id} params={data.params} onChange={(param, v) => setParam(id, param, v)} />
+                )}
             </div>
 
-            {def.inputs.map((port, i) => (
-                <Handle
-                    key={port.id}
-                    id={port.id}
-                    type="target"
-                    position={Position.Left}
-                    className={`socket socket-${port.kind}`}
-                    style={{ top: portOffset(i, def.inputs.length) }}
-                />
-            ))}
-            {def.outputs.map((port, i) => (
-                <Handle
-                    key={port.id}
-                    id={port.id}
-                    type="source"
-                    position={Position.Right}
-                    className={`socket socket-${port.kind}`}
-                    style={{ top: portOffset(i, def.outputs.length) }}
-                />
-            ))}
+            <Sockets ports={def.inputs} side="in" />
+            <Sockets ports={def.outputs} side="out" />
         </div>
     );
 });

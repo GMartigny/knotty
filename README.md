@@ -19,10 +19,12 @@ npm run dev
 
 Les câbles sont typés `audio` ou `trigger` ; les connexions incompatibles et les boucles sont refusées.
 
+Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion. Le Bruit sonne en continu tant que rien n'est branché sur son entrée « Déclencheur », puis seulement à chaque coup dès qu'un câble y arrive.
+
 ## Feuille de route
 
 1. ~~Bruit → Filtre → Réverb → Sortie, câbles Verlet~~
-2. Oscillateur, Delay, Distorsion
-3. Séquenceur et câbles trigger
+2. ~~Séquenceur (4 lignes × 16 pas, une sortie trigger par ligne) et câbles trigger~~
+3. Oscillateur, Delay, Distorsion
 4. Impulsions lumineuses le long des câbles
 5. Sauvegarde locale, partage par URL

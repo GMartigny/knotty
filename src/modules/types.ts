@@ -7,7 +7,11 @@ export interface PortDef {
     id: string;
     kind: PortKind;
     label?: string;
+    /** La prise est placée par le corps personnalisé du bloc, pas automatiquement. */
+    inline?: boolean;
 }
+
+export type TriggerListener = (time: number) => void;
 
 export interface ParamDef {
     id: string;
@@ -21,6 +25,8 @@ export interface ParamDef {
     unit?: string;
     /** Si défini, le paramètre est un choix : la valeur est l'index de l'option. */
     options?: string[];
+    /** Paramètre stocké mais sans curseur (ex. motifs du séquenceur). */
+    hidden?: boolean;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output";
@@ -34,6 +40,14 @@ export interface ModuleInstance {
     setParam(id: string, value: number): void;
     /** Appelé quand le moteur démarre (ex. lancer une source). */
     start?(): void;
+    /** Sortie trigger : s'abonner aux déclenchements. Renvoie la fonction de désabonnement. */
+    listen?(portId: string, fn: TriggerListener): () => void;
+    /** Entrée trigger : reçoit un déclenchement à l'heure audio `time`. */
+    trigger?(portId: string, time: number): void;
+    /** Entrée trigger : indique si au moins un câble y est branché. */
+    setTriggerConnected?(portId: string, connected: boolean): void;
+    /** État affichable (ex. pas courant du séquenceur), lu par l'UI. */
+    position?(): number;
     dispose(): void;
 }
 

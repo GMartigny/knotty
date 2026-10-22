@@ -283,6 +283,83 @@ button {
     background: var(--accent);
 }
 
+/* ——— Séquenceur ——— */
+
+.block-sequencer {
+    width: auto;
+}
+
+.seq {
+    display: grid;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.seq-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* La ligne va jusqu'au bord du bloc pour que sa prise s'y accroche. */
+    margin-right: -14px;
+    padding-right: 14px;
+}
+
+.seq-row-label {
+    width: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.seq-steps {
+    display: grid;
+    grid-template-columns: repeat(16, 18px);
+    gap: 3px;
+}
+
+/* Un petit écart tous les 4 pas pour lire les temps. */
+.seq-step:nth-child(4n + 1):not(:first-child) {
+    margin-left: 5px;
+}
+
+.seq-step {
+    width: 18px;
+    height: 22px;
+    padding: 0;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background: var(--cream-shade);
+    box-shadow: 0 2px 0 var(--ink);
+    transition: transform 0.06s;
+}
+
+.seq-step:nth-child(8n + 1),
+.seq-step:nth-child(8n + 2),
+.seq-step:nth-child(8n + 3),
+.seq-step:nth-child(8n + 4) {
+    background: #e9d8b8;
+}
+
+.seq-step.is-on {
+    background: var(--accent);
+}
+
+.seq-step:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--ink);
+}
+
+.seq-step.is-playing {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+}
+
+.seq-step.is-on.is-playing {
+    background: var(--cream);
+    transform: translateY(-2px);
+}
+
 /* ——— Prises ——— */
 
 .react-flow__handle.socket {
@@ -343,6 +420,10 @@ button {
     stroke-width: 6px;
     stroke-linecap: round;
     filter: drop-shadow(0 0 calc(var(--level) * 8px) var(--cable-color, var(--cable-audio)));
+}
+
+.cable-main {
+    stroke-width: calc(6px + var(--level) * 3px);
 }
 
 .cable .react-flow__edge-interaction {
@@ -406,7 +487,8 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .block {
+    .block,
+    .seq-step.is-on.is-playing {
         transform: none;
         transition: none;
     }

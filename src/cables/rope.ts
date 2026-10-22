@@ -28,25 +28,29 @@ export const ROPE = {
 const pointCountFor = (distance: number) =>
     Math.max(ROPE.minPoints, Math.min(ROPE.maxPoints, Math.round(distance / ROPE.spacing) + 1));
 
-/** Rééchantillonne une polyligne en `count` points répartis selon la longueur d'arc. */
-const resample = (points: Vec[], count: number): Vec[] => {
+/**
+ * Rééchantillonne une polyligne en `count` points répartis selon la longueur d'arc,
+ * et interpole au même endroit une valeur attachée à chaque point (ici la vitesse).
+ */
+const resampleWith = (points: Vec[], values: Vec[], count: number) => {
     const lengths = [0];
     for (let i = 1; i < points.length; i++) {
         lengths.push(lengths[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y));
     }
     const total = lengths[lengths.length - 1] || 1;
-    const result: Vec[] = [];
+    const out = { points: [] as Vec[], values: [] as Vec[] };
+    const lerp = (a: Vec, b: Vec, t: number) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
     let seg = 0;
     for (let i = 0; i < count; i++) {
         const target = (total * i) / (count - 1);
         while (seg < points.length - 2 && lengths[seg + 1] < target) seg++;
         const span = lengths[seg + 1] - lengths[seg] || 1;
         const t = Math.min(1, Math.max(0, (target - lengths[seg]) / span));
-        const a = points[seg];
-        const b = points[seg + 1] ?? a;
-        result.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+        const next = Math.min(seg + 1, points.length - 1);
+        out.points.push(lerp(points[seg], points[next], t));
+        out.values.push(lerp(values[seg], values[next], t));
     }
-    return result;
+    return out;
 };
 
 export class Rope {
@@ -88,9 +92,19 @@ export class Rope {
     /** Ajuste le nombre de points à la longueur du câble. */
     private adaptResolution() {
         const wanted = pointCountFor(Math.hypot(this.b.x - this.a.x, this.b.y - this.a.y));
-        if (wanted === this.points.length) return;
-        this.points = resample(this.points, wanted);
-        this.prev = resample(this.prev, wanted);
+        // Hystérésis : on ne rééchantillonne pas pour un écart d'un seul point,
+        // sinon un déplacement autour d'un seuil provoque des rééchantillonnages en rafale.
+        const current = this.points.length;
+        const atBound = wanted === ROPE.minPoints || wanted === ROPE.maxPoints;
+        if (wanted === current || (Math.abs(wanted - current) < 2 && !atBound)) return;
+
+        // La vitesse est rééchantillonnée le long de la *même* courbe que les positions :
+        // rééchantillonner `prev` séparément créait une fausse vitesse qui projetait
+        // les premiers points du câble dans la direction du mouvement.
+        const velocities = this.points.map((p, i) => ({ x: p.x - this.prev[i].x, y: p.y - this.prev[i].y }));
+        const { points, values } = resampleWith(this.points, velocities, wanted);
+        this.points = points;
+        this.prev = points.map((p, i) => ({ x: p.x - values[i].x, y: p.y - values[i].y }));
     }
 
     step(dt: number) {
@@ -120,7 +134,11 @@ export class Rope {
             points[0].y = this.a.y;
             points[n - 1].x = this.b.x;
             points[n - 1].y = this.b.y;
-            for (let i = 0; i < n - 1; i++) {
+            // Sens alterné à chaque passe : sinon les corrections partent toujours
+            // de la source et ce côté du câble suit le mouvement plus que l'autre.
+            const forward = k % 2 === 0;
+            for (let j = 0; j < n - 1; j++) {
+                const i = forward ? j : n - 2 - j;
                 const p = points[i];
                 const q = points[i + 1];
                 const dx = q.x - p.x;

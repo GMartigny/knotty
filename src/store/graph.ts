@@ -43,25 +43,27 @@ const makeNode = (type: string, position: XYPosition, id = newId(type)): ModuleN
     data: { type, params: defaultParams(registry[type]) },
 });
 
-/** Patch de départ : Bruit → Filtre → Réverb → Sortie. */
+/** Patch de départ : Séquenceur ⇢ Bruit → Filtre → Réverb → Sortie. */
 const initialNodes: ModuleNode[] = [
-    makeNode("noise", { x: 40, y: 120 }, "noise-1"),
-    makeNode("filter", { x: 330, y: 60 }, "filter-1"),
-    makeNode("reverb", { x: 620, y: 180 }, "reverb-1"),
-    makeNode("output", { x: 910, y: 100 }, "output-1"),
+    makeNode("sequencer", { x: -120, y: 360 }, "sequencer-1"),
+    makeNode("noise", { x: 40, y: 80 }, "noise-1"),
+    makeNode("filter", { x: 330, y: 40 }, "filter-1"),
+    makeNode("reverb", { x: 620, y: 160 }, "reverb-1"),
+    makeNode("output", { x: 910, y: 80 }, "output-1"),
 ];
 
-const cable = (source: string, target: string): CableEdge => ({
-    id: `${source}->${target}`,
+const cable = (source: string, target: string, kind: PortKind = "audio", sourceHandle = "out", targetHandle = "in"): CableEdge => ({
+    id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
     source,
-    sourceHandle: "out",
+    sourceHandle,
     target,
-    targetHandle: "in",
+    targetHandle,
     type: "cable",
-    data: { kind: "audio" },
+    data: { kind },
 });
 
 const initialEdges: CableEdge[] = [
+    cable("sequencer-1", "noise-1", "trigger", "row0", "gate"),
     cable("noise-1", "filter-1"),
     cable("filter-1", "reverb-1"),
     cable("reverb-1", "output-1"),

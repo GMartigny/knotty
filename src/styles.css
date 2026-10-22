@@ -313,17 +313,17 @@ button {
 }
 
 .seq-steps {
-    display: grid;
-    grid-template-columns: repeat(16, 18px);
+    display: flex;
+    gap: 8px;
+}
+
+.seq-beat {
+    display: flex;
     gap: 3px;
 }
 
-/* Un petit écart tous les 4 pas pour lire les temps. */
-.seq-step:nth-child(4n + 1):not(:first-child) {
-    margin-left: 5px;
-}
-
 .seq-step {
+    flex: none;
     width: 18px;
     height: 22px;
     padding: 0;
@@ -334,10 +334,8 @@ button {
     transition: transform 0.06s;
 }
 
-.seq-step:nth-child(8n + 1),
-.seq-step:nth-child(8n + 2),
-.seq-step:nth-child(8n + 3),
-.seq-step:nth-child(8n + 4) {
+/* Un temps sur deux légèrement plus foncé. */
+:where(.seq-beat:nth-child(odd)) .seq-step {
     background: #e9d8b8;
 }
 

@@ -4,6 +4,8 @@ import { engine } from "../audio/engine";
 import { SEQ_ROWS, SEQ_STEPS, isStepOn, rowOutput, rowParam, toggleStep } from "../modules/sequencer";
 import type { ParamValues } from "../modules/types";
 
+const BEAT = 4;
+
 /** Pas courant du séquenceur, relu à chaque frame tant que le bloc est affiché. */
 function usePlayhead(nodeId: string) {
     const [step, setStep] = useState(-1);
@@ -38,20 +40,26 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                             {row + 1}
                         </span>
                         <div className="seq-steps">
-                            {Array.from({ length: SEQ_STEPS }, (_, step) => {
-                                const on = isStepOn(pattern, step);
-                                return (
-                                    <button
-                                        key={step}
-                                        type="button"
-                                        role="gridcell"
-                                        aria-pressed={on}
-                                        aria-label={`Ligne ${row + 1}, pas ${step + 1}`}
-                                        className={`seq-step nodrag ${on ? "is-on" : ""} ${step === playhead ? "is-playing" : ""}`}
-                                        onClick={() => onChange(rowParam(row), toggleStep(pattern, step))}
-                                    />
-                                );
-                            })}
+                            {/* Un groupe par temps (4 pas), pour lire la mesure d'un coup d'œil. */}
+                            {Array.from({ length: SEQ_STEPS / BEAT }, (_, beat) => (
+                                <div className="seq-beat" key={beat}>
+                                    {Array.from({ length: BEAT }, (_, i) => {
+                                        const step = beat * BEAT + i;
+                                        const on = isStepOn(pattern, step);
+                                        return (
+                                            <button
+                                                key={step}
+                                                type="button"
+                                                role="gridcell"
+                                                aria-pressed={on}
+                                                aria-label={`Ligne ${row + 1}, pas ${step + 1}`}
+                                                className={`seq-step nodrag ${on ? "is-on" : ""} ${step === playhead ? "is-playing" : ""}`}
+                                                onClick={() => onChange(rowParam(row), toggleStep(pattern, step))}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            ))}
                         </div>
                         <Handle
                             id={rowOutput(row)}

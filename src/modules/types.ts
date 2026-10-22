@@ -41,6 +41,8 @@ export interface ParamDef {
     row?: number;
     /** Show only the slider and its value, without the label (still read by screen readers). */
     bare?: boolean;
+    /** The same value on every block of this type (e.g. the sequencers' tempo, which is global). */
+    shared?: boolean;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";
@@ -52,7 +54,7 @@ export const SOURCE_DB = -12;
 export const SOURCE_LEVEL = Math.pow(10, SOURCE_DB / 20);
 
 /** Prefix of modulation sockets: `mod:frequency` modulates the `frequency` setting. */
-export const MOD_PREFIX = "mod:";
+const MOD_PREFIX = "mod:";
 export const modPort = (paramId: string) => `${MOD_PREFIX}${paramId}`;
 export const modParamOf = (portId: string) => (portId.startsWith(MOD_PREFIX) ? portId.slice(MOD_PREFIX.length) : undefined);
 
@@ -75,7 +77,7 @@ export const defaultDepth = (p: ParamDef) => (base: number) => (p.scale === "log
  * Effective value of a modulated setting read at a given moment (e.g. on trigger).
  * `m` is the modulation signal, between -1 and 1: ±2 octaves on a log scale, ±half the range otherwise.
  */
-export const applyMod = (p: ParamDef, base: number, m: number) => {
+const applyMod = (p: ParamDef, base: number, m: number) => {
     const v = p.scale === "log" ? base * Math.pow(2, 2 * m) : base + (m * (p.max - p.min)) / 2;
     return Math.min(p.max, Math.max(p.min, v));
 };

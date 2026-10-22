@@ -1,4 +1,4 @@
-import { memo, useRef } from "react";
+import { memo, useRef, type ReactNode } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { categoryColor, registry } from "../modules/registry";
 import { useGraph, type ModuleNode } from "../store/graph";
@@ -12,8 +12,18 @@ import { MiniPiano } from "./MiniPiano";
 import { NoteDisplay } from "./NoteDisplay";
 import { DiceFace } from "./DiceFace";
 import { CommentBlock } from "./CommentBlock";
-import { isActive, modPort, rowCount, type PortDef } from "../modules/types";
+import { isActive, modPort, rowCount, type ParamValues, type PortDef } from "../modules/types";
 import { RowResizer } from "./RowResizer";
+
+/** What some blocks show above their settings: a wave, a curve, a die… */
+const DISPLAYS: Record<string, (id: string, params: ParamValues) => ReactNode> = {
+    envelope: (_, params) => <EnvelopeShape params={params} />,
+    keyboard: (id) => <MiniPiano nodeId={id} />,
+    scale: (id) => <NoteDisplay nodeId={id} />,
+    random: (id, params) => <DiceFace nodeId={id} count={params.values ?? 6} />,
+    filter: (_, params) => <FilterCurve params={params} />,
+    sine: (id, params) => <MiniScope nodeId={id} frequency={params.frequency} shape={params.shape ?? 0} />,
+};
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
 
@@ -79,7 +89,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
 
     if (!def) return null;
     // A block without settings (e.g. Output) shrinks to its header.
-    const compact = !def.params.some((p) => !p.hidden) && def.type !== "sequencer";
+    const compact = !def.params.some((p) => !p.hidden);
 
     return (
         <div
@@ -123,12 +133,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                 <div className="block-body">
                     <InputRows ports={def.inputs} />
                     {def.idleHint && !plugged.has(def.idleHint.port) && <p className="idle-hint">{def.idleHint.text}</p>}
-                    {def.type === "envelope" && <EnvelopeShape params={data.params} />}
-                    {def.type === "keyboard" && <MiniPiano nodeId={id} />}
-                    {def.type === "scale" && <NoteDisplay nodeId={id} />}
-                    {def.type === "random" && <DiceFace nodeId={id} count={data.params.values ?? 6} />}
-                    {def.type === "filter" && <FilterCurve params={data.params} />}
-                    {def.type === "sine" && <MiniScope nodeId={id} frequency={data.params.frequency} shape={data.params.shape ?? 0} />}
+                    {DISPLAYS[def.type]?.(id, data.params)}
                     {def.params
                         .filter((p) => !p.hidden && isActive(def, data.params, p))
                         .map((p) => (
@@ -147,7 +152,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                 </div>
             )}
 
-            {def.rows && <RowResizer nodeId={id} def={{ ...def, rows: def.rows }} rows={rowCount(def, data.params)} />}
+            {def.rows && <RowResizer nodeId={id} min={def.rows.min} max={def.rows.max} rows={rowCount(def, data.params)} />}
             {compact && <EdgeSockets ports={def.inputs} side="in" />}
             <EdgeSockets ports={def.outputs} side="out" />
         </div>

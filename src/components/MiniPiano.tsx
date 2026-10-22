@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { engine } from "../audio/engine";
-import { BLACK, KEY_CODES, NOTE_NAMES } from "../modules/keyboard";
+import { BLACK, KEY_CODES } from "../modules/keyboard";
+import { NOTE_NAMES } from "../modules/notes";
+import { usePosition } from "../audio/usePosition";
 
 /** Letter shown on each key, following the actual keyboard layout (QWERTY, AZERTY…). */
 function useKeyLabels() {
@@ -14,25 +16,11 @@ function useKeyLabels() {
     return labels;
 }
 
-/** Keys held on the keyboard, read on every frame. */
-function useHeld(nodeId: string) {
-    const [held, setHeld] = useState(0);
-    useEffect(() => {
-        let frame = 0;
-        const tick = () => {
-            setHeld(Math.max(0, engine.position(nodeId)));
-            frame = requestAnimationFrame(tick);
-        };
-        frame = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(frame);
-    }, [nodeId]);
-    return held;
-}
-
 /** One-octave mini-piano: each key shows the keyboard letter that plays it, and can be clicked. */
 export function MiniPiano({ nodeId }: { nodeId: string }) {
     const labels = useKeyLabels();
-    const held = useHeld(nodeId);
+    // Keys held on the computer keyboard, as a bitmask.
+    const held = Math.max(0, usePosition(nodeId));
     const [clicked, setClicked] = useState(-1);
 
     const whites = KEY_CODES.map((_, i) => i).filter((i) => !BLACK.has(i));
@@ -41,7 +29,7 @@ export function MiniPiano({ nodeId }: { nodeId: string }) {
             key={i}
             type="button"
             className={`piano-key nodrag ${BLACK.has(i) ? "is-black" : "is-white"} ${held & (1 << i) || clicked === i ? "is-down" : ""}`}
-            aria-label={`${NOTE_NAMES[i]} (key ${labels[i]})`}
+            aria-label={`${NOTE_NAMES[i % 12]} (key ${labels[i]})`}
             onPointerDown={(e) => {
                 e.stopPropagation();
                 setClicked(i);

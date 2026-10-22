@@ -15,20 +15,17 @@ import { CableEdge } from "./cables/CableEdge";
 import { Palette } from "./components/Palette";
 import { ClearButton } from "./components/ClearButton";
 import { EmptyMat } from "./components/EmptyMat";
+import { isTextField } from "./lib/dom";
 
 const nodeTypes = { module: ModuleBlock };
-
-/** Typing in a text field: its own undo applies, not the patch's. */
-const isTyping = (target: EventTarget | null) =>
-    target instanceof HTMLTextAreaElement ||
-    (target instanceof HTMLInputElement && target.type !== "range") ||
-    (target instanceof HTMLElement && target.isContentEditable);
+const edgeTypes = { cable: CableEdge };
 
 /** Ctrl+Z undoes the last change to the patch; Ctrl+Shift+Z (or Ctrl+Y) redoes it. Cmd on a Mac. */
 function useUndoKeys() {
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (!(e.ctrlKey || e.metaKey) || e.altKey || isTyping(e.target)) return;
+            // In a text field, its own undo applies, not the patch's.
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || isTextField(e.target)) return;
             const key = e.key.toLowerCase();
             if (key === "z" && !e.shiftKey) useGraph.getState().undo();
             else if ((key === "z" && e.shiftKey) || key === "y") useGraph.getState().redo();
@@ -39,7 +36,6 @@ function useUndoKeys() {
         return () => window.removeEventListener("keydown", onKey);
     }, []);
 }
-const edgeTypes = { cable: CableEdge };
 
 /** Cable "in hand" while pulling: a slightly sagging curve. */
 function DraggingCable({ fromX, fromY, toX, toY }: ConnectionLineComponentProps) {

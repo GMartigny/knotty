@@ -1,7 +1,7 @@
 import type { ParamValues } from "../modules/types";
+import { DISPLAY } from "./display";
 
-const W = 188;
-const H = 54;
+const { width: W, height: H } = DISPLAY;
 const PAD = 4;
 
 /** Drawing of the ADSR curve: each phase gets a width proportional to its duration. */

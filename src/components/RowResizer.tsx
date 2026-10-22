@@ -1,11 +1,12 @@
 import { useRef } from "react";
 import { useGraph } from "../store/graph";
-import type { ModuleDef } from "../modules/types";
 
 interface Props {
     nodeId: string;
-    def: ModuleDef & { rows: NonNullable<ModuleDef["rows"]> };
+    /** Current number of rows, and its bounds. */
     rows: number;
+    min: number;
+    max: number;
 }
 
 /**
@@ -13,7 +14,7 @@ interface Props {
  * One row is added each time the pointer moves by the height of a row (read from the rows
  * marked `data-row`, so it follows the zoom). Arrow keys do the same from the keyboard.
  */
-export function RowResizer({ nodeId, def, rows }: Props) {
+export function RowResizer({ nodeId, rows, min, max }: Props) {
     const setRows = useGraph((s) => s.setRows);
     const drag = useRef<{ y: number; rows: number; pitch: number } | null>(null);
 
@@ -31,8 +32,8 @@ export function RowResizer({ nodeId, def, rows }: Props) {
             tabIndex={0}
             aria-label="Rows"
             aria-orientation="vertical"
-            aria-valuemin={def.rows.min}
-            aria-valuemax={def.rows.max}
+            aria-valuemin={min}
+            aria-valuemax={max}
             aria-valuenow={rows}
             title="Drag to add or remove rows"
             onPointerDown={(e) => {

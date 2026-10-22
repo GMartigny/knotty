@@ -1,36 +1,20 @@
-import { registry } from "../modules/registry";
-import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
+import type { ParamValues, PortKind } from "../modules/types";
 import type { CableEdge, ModuleNode } from "./graph";
-import { commentFrame } from "../modules/comment";
+import { createCable, createNode } from "./nodes";
 
 /** 16-step pattern from the numbers of the steps that are on (1 to 16). */
 const steps = (...on: number[]) => on.reduce((pattern, s) => pattern | (1 << (s - 1)), 0);
 
-const node = (id: string, type: string, x: number, y: number, params: ParamValues = {}): ModuleNode => ({
-    id,
-    type: "module",
-    position: { x, y },
-    data: { type, params: { ...defaultParams(registry[type]), ...params } },
-});
+const node = (id: string, type: string, x: number, y: number, params: ParamValues = {}) => createNode(type, { x, y }, { id, params });
 
 /** Comment frame (behind the blocks) to name a part of the patch. */
-const note = (id: string, x: number, y: number, width: number, height: number, text: string): ModuleNode => ({
-    ...node(id, "comment", x, y),
-    data: { type: "comment", params: {}, text },
-    ...commentFrame(width, height),
-});
+const note = (id: string, x: number, y: number, width: number, height: number, text: string) =>
+    createNode("comment", { x, y }, { id, text, size: { width, height } });
 
 type Patch = { nodes: ModuleNode[]; edges: CableEdge[] };
 
-const cable = (source: string, sourceHandle: string, target: string, targetHandle: string, kind: PortKind = "audio"): CableEdge => ({
-    id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
-    source,
-    sourceHandle,
-    target,
-    targetHandle,
-    type: "cable",
-    data: { kind },
-});
+const cable = (source: string, sourceHandle: string, target: string, targetHandle: string, kind: PortKind = "audio") =>
+    createCable(source, sourceHandle, target, targetHandle, kind);
 
 /**
  * "Groove" patch: a little tune on a 5-row sequencer.
@@ -351,7 +335,7 @@ function metalPatch(): Patch {
     return { nodes, edges };
 }
 
-export interface Example {
+interface Example {
     id: string;
     label: string;
     description: string;

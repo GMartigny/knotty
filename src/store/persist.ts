@@ -1,7 +1,8 @@
 import { compatible, portKind, registry } from "../modules/registry";
-import { defaultParams, type ParamValues } from "../modules/types";
-import { COMMENT_SIZE, commentFrame } from "../modules/comment";
+import type { ParamValues } from "../modules/types";
+import { COMMENT_SIZE } from "../modules/comment";
 import type { CableEdge, ModuleNode } from "./graph";
+import { alignShared, createCable, createNode } from "./nodes";
 
 const KEY = "knotty:patch:v1";
 const SAVE_DELAY_MS = 300;
@@ -14,7 +15,8 @@ interface SavedPatch {
 
 /**
  * Saved patch, cleaned up for the current app version: unknown block types are ignored,
- * settings are filled with their defaults, cables to missing or incompatible sockets are removed.
+ * settings are kept within their range and filled with their defaults, shared settings (the tempo)
+ * are aligned, cables to missing or incompatible sockets and duplicate cables are removed.
  * `null` if nothing is saved or it is unreadable.
  */
 export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null {
@@ -28,47 +30,41 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
         return null;
     }
 
-    const nodes: ModuleNode[] = saved.nodes
-        .filter((n) => registry[n.type])
-        .map((n) => {
-            const defaults = defaultParams(registry[n.type]);
-            // Only settings that still exist are kept.
-            const params = Object.fromEntries(
-                Object.entries(defaults).map(([id, value]) => [id, Number.isFinite(n.params?.[id]) ? n.params[id] : value]),
-            );
-            const node: ModuleNode = { id: n.id, type: "module", position: { x: n.x, y: n.y }, data: { type: n.type, params } };
-            if (n.type !== "comment") return node;
-            const size = (v: unknown, fallback: number) => (Number.isFinite(v) && (v as number) >= 80 ? (v as number) : fallback);
-            return {
-                ...node,
-                data: { ...node.data, text: typeof n.text === "string" ? n.text : "" },
-                ...commentFrame(size(n.w, COMMENT_SIZE.width), size(n.h, COMMENT_SIZE.height)),
-            };
-        });
+    const nodes = alignShared(
+        saved.nodes
+            .filter((n) => registry[n.type])
+            .map((n) => {
+                // Only settings that still exist are kept, within their range.
+                const params: ParamValues = {};
+                for (const p of registry[n.type].params) {
+                    const v = n.params?.[p.id];
+                    if (Number.isFinite(v)) params[p.id] = Math.min(p.max, Math.max(p.min, v));
+                }
+                const size = (v: unknown, fallback: number) => (Number.isFinite(v) && (v as number) >= 80 ? (v as number) : fallback);
+                return createNode(n.type, { x: n.x, y: n.y }, {
+                    id: n.id,
+                    params,
+                    text: typeof n.text === "string" ? n.text : "",
+                    size: { width: size(n.w, COMMENT_SIZE.width), height: size(n.h, COMMENT_SIZE.height) },
+                });
+            }),
+    );
 
     const byId = new Map(nodes.map((n) => [n.id, n.data]));
-    const edges: CableEdge[] = saved.edges.flatMap((e) => {
+    const edges = new Map<string, CableEdge>();
+    for (const e of saved.edges) {
         const src = byId.get(e.source);
         const dst = byId.get(e.target);
-        if (!src || !dst) return [];
+        if (!src || !dst) continue;
         // Sockets on hidden rows don't count: their cables are dropped.
         const out = portKind(src.type, e.sourceHandle, "out", src.params);
         const into = portKind(dst.type, e.targetHandle, "in", dst.params);
-        if (!out || !into || !compatible(out, into)) return [];
-        return [
-            {
-                id: `${e.source}:${e.sourceHandle}->${e.target}:${e.targetHandle}`,
-                source: e.source,
-                sourceHandle: e.sourceHandle,
-                target: e.target,
-                targetHandle: e.targetHandle,
-                type: "cable" as const,
-                data: { kind: out },
-            },
-        ];
-    });
+        if (!out || !into || !compatible(out, into)) continue;
+        const cable = createCable(e.source, e.sourceHandle, e.target, e.targetHandle, out);
+        edges.set(cable.id, cable);
+    }
 
-    return { nodes, edges };
+    return { nodes, edges: [...edges.values()] };
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;

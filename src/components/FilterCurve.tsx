@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import type { ParamValues } from "../modules/types";
+import { DISPLAY } from "./display";
 
-const W = 188;
-const H = 54;
+const { width: W, height: H } = DISPLAY;
 const PAD = 4;
 const F_MIN = 20;
 const F_MAX = 20000;

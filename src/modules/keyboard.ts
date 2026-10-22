@@ -1,5 +1,7 @@
 import * as Tone from "tone";
 import type { ModuleDef, TriggerListener } from "./types";
+import { frequencyOf, midiC } from "./notes";
+import { isTextField } from "../lib/dom";
 
 /**
  * Computer keyboard keys, by physical position (`event.code`): the middle row
@@ -9,26 +11,13 @@ import type { ModuleDef, TriggerListener } from "./types";
 export const KEY_CODES = ["KeyA", "KeyW", "KeyS", "KeyE", "KeyD", "KeyF", "KeyT", "KeyG", "KeyY", "KeyH", "KeyU", "KeyJ", "KeyK"];
 /** Black semitones (sharps) in the octave. */
 export const BLACK = new Set([1, 3, 6, 8, 10]);
-export const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B", "C"];
 
 const OCTAVES = [2, 3, 4, 5];
-const C4 = 261.63;
 
-export const noteFrequency = (octaveIndex: number, semitone: number) =>
-    C4 * Math.pow(2, (OCTAVES[octaveIndex] ?? 4) - 4) * Math.pow(2, semitone / 12);
+const noteFrequency = (octaveIndex: number, semitone: number) => frequencyOf(midiC(OCTAVES[octaveIndex] ?? 4) + semitone);
 
 /** Don't play while typing text, nor with a shortcut. */
-const ignored = (e: KeyboardEvent) => {
-    const t = e.target as HTMLElement | null;
-    return (
-        e.ctrlKey ||
-        e.metaKey ||
-        e.altKey ||
-        t?.isContentEditable ||
-        (t instanceof HTMLInputElement && t.type !== "range") ||
-        t instanceof HTMLTextAreaElement
-    );
-};
+const ignored = (e: KeyboardEvent) => e.ctrlKey || e.metaKey || e.altKey || isTextField(e.target);
 
 /** Plays notes from the computer keyboard or the block's mini-piano. */
 export const keyboard: ModuleDef = {

@@ -2,3 +2,9 @@ node_modules
 dist
 *.tsbuildinfo
 .DS_Store
+
+# Test outputs
+coverage
+test-results
+playwright-report
+/*.png

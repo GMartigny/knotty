@@ -8,7 +8,7 @@ export interface Vec {
     y: number;
 }
 
-export const ROPE = {
+const ROPE = {
     /** Target spacing between two points, in px. Tighter = softer ends near the sockets. */
     spacing: 16,
     minPoints: 8,
@@ -125,6 +125,16 @@ export class Rope {
         // Small upward jolt for the "yanking the plug" effect.
         const i = end === "a" ? 0 : this.points.length - 1;
         this.prev[i].y = this.points[i].y + 6;
+    }
+
+    /** Plugs both ends back in (an undone unplug): the cable is whole again. */
+    reattach() {
+        if (this.pinA && this.pinB) return;
+        this.pinA = this.pinB = true;
+        this.frozenSegment = undefined;
+        this.awake = true;
+        this.calmFrames = 0;
+        this.adaptResolution();
     }
 
     private restSegment() {

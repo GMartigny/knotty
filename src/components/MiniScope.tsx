@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import { engine } from "../audio/engine";
 import { SOURCE_LEVEL } from "../modules/types";
+import { DISPLAY } from "./display";
 
-const W = 188;
-const H = 54;
+const { width: W, height: H } = DISPLAY;
 const PAD = 5;
 const CYCLES = 3;
 /** Minimum cycles to fit in memory; below that, the curve scrolls. */

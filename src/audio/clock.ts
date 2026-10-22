@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 
 /** Called on each sixteenth note with the audio time and the sixteenth number since the start. */
-export type SixteenthListener = (time: number, sixteenth: number) => void;
+type SixteenthListener = (time: number, sixteenth: number) => void;
 
 const listeners = new Set<SixteenthListener>();
 let started = false;

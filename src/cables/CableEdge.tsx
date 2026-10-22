@@ -37,9 +37,11 @@ export function CableEdge({
     useEffect(() => () => physics.remove(id), [id]);
 
     // Unplugged: the end on the pulled socket's side comes loose and falls.
+    // Plugged back in by an undo during the fall: both ends hang on again.
     const dropping = data?.dropping;
     useEffect(() => {
         if (dropping) physics.release(id, dropping === "source" ? "a" : "b");
+        else physics.reattach(id);
     }, [id, dropping]);
 
     // While pulling from an already plugged socket, its cables fade: dropping in empty space unplugs them.

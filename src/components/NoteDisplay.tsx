@@ -1,19 +1,9 @@
-import { useEffect, useState } from "react";
-import { engine } from "../audio/engine";
-import { noteName } from "../modules/scale";
+import { usePosition } from "../audio/usePosition";
+import { noteName } from "../modules/notes";
 
 /** Last note played by the Scale, shown big. */
 export function NoteDisplay({ nodeId }: { nodeId: string }) {
-    const [midi, setMidi] = useState(-1);
-    useEffect(() => {
-        let frame = 0;
-        const tick = () => {
-            setMidi(engine.position(nodeId));
-            frame = requestAnimationFrame(tick);
-        };
-        frame = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(frame);
-    }, [nodeId]);
+    const midi = usePosition(nodeId);
 
     return (
         <div className="note-display" aria-live="off">

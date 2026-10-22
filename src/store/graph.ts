@@ -12,9 +12,9 @@ import {
 } from "@xyflow/react";
 import { compatible, portKind, registry } from "../modules/registry";
 import { loadPatch, savePatch } from "./persist";
-import { COMMENT_SIZE, commentFrame } from "../modules/comment";
 import { examplePatch } from "./example";
-import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
+import { alignShared, createNode, newId } from "./nodes";
+import type { ParamValues, PortKind } from "../modules/types";
 
 export interface ModuleData extends Record<string, unknown> {
     type: string;
@@ -46,7 +46,7 @@ export interface Grab {
 }
 
 /** How long an unplugged cable falls before it disappears, in ms. */
-export const DROP_MS = 700;
+const DROP_MS = 700;
 
 /**
  * Duration of the cascade when clearing everything, in ms, whatever the number of blocks:
@@ -91,16 +91,9 @@ interface GraphState {
     redo(): void;
 }
 
-let counter = 0;
-const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
-
-const makeNode = (type: string, position: XYPosition, id = newId(type), params: ParamValues = {}): ModuleNode => ({
-    id,
-    type: "module",
-    position,
-    data: { type, params: { ...defaultParams(registry[type]), ...params } },
-    ...(type === "comment" && commentFrame(COMMENT_SIZE.width, COMMENT_SIZE.height)),
-});
+/** The same nodes, with one block's settings changed. */
+const withParams = (nodes: ModuleNode[], nodeId: string, changes: ParamValues) =>
+    nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, ...changes } } } : n));
 
 /** Assumed size of a new block until it is measured. */
 const NEW_BLOCK = { width: 240, height: 230 };
@@ -114,8 +107,8 @@ const MARGIN = 56;
 const freeSpot = (nodes: ModuleNode[], wanted: XYPosition): XYPosition => {
     const overlaps = (p: XYPosition) =>
         nodes.some((n) => {
-            // A block can be dropped inside a Comment frame.
-            if (n.data.type === "comment") return false;
+            // A block can be dropped inside a Comment frame, or where a block is falling.
+            if (n.data.type === "comment" || n.data.removing) return false;
             const w = n.measured?.width ?? NEW_BLOCK.width;
             const h = n.measured?.height ?? NEW_BLOCK.height;
             return (
@@ -333,7 +326,8 @@ export const useGraph = create<GraphState>((set, get) => {
             // A Comment lands where it is dropped, even over blocks (it goes behind them).
             const at = type === "comment" ? position : freeSpot(nodes, position);
             record();
-            set({ nodes: [...nodes, makeNode(type, at)] });
+            // Shared settings (the tempo) follow the blocks already on the mat.
+            set({ nodes: alignShared([...nodes, createNode(type, at)]) });
         },
 
         setParam(nodeId, paramId, value) {
@@ -342,11 +336,9 @@ export const useGraph = create<GraphState>((set, get) => {
             // A slider drag is one undo step; a click (a sequencer step, a choice) is one step each.
             const def = registry[node.data.type]?.params.find((p) => p.id === paramId);
             record(def && !def.hidden && !def.options ? `${nodeId}:${paramId}` : "");
-            set({
-                nodes: get().nodes.map((n) =>
-                    n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
-                ),
-            });
+            // A shared setting (the tempo) changes on every block of the same type.
+            const targets = def?.shared ? get().nodes.filter((n) => n.data.type === node.data.type) : [node];
+            set({ nodes: targets.reduce((nodes, t) => withParams(nodes, t.id, { [paramId]: value }), get().nodes) });
         },
 
         setRows(nodeId, rows) {
@@ -357,12 +349,7 @@ export const useGraph = create<GraphState>((set, get) => {
             if (count === node.data.params[def.rows.param]) return;
             // Dragging the grip over several rows is a single undo step.
             record(`${nodeId}:rows`);
-            const param = def.rows.param;
-            set({
-                nodes: get().nodes.map((n) =>
-                    n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [param]: count } } } : n,
-                ),
-            });
+            set({ nodes: withParams(get().nodes, nodeId, { [def.rows.param]: count }) });
             // Cables plugged into a row that just disappeared come loose on this block's side.
             const params = get().nodes.find((n) => n.id === nodeId)!.data.params;
             for (const e of get().edges.filter(isLive)) {

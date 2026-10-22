@@ -5,6 +5,7 @@ import { modParamOf, SOURCE_LEVEL, type ModuleInstance, type ParamValues } from 
 import { useGraph, type CableEdge, type ModuleNode } from "../store/graph";
 
 interface LiveModule {
+    type: string;
     instance: ModuleInstance;
     params: ParamValues;
     meter: Tone.Meter;
@@ -115,8 +116,9 @@ class AudioEngine {
         // A block or cable that is falling is already removed as far as audio is concerned.
         const nodes = allNodes.filter((n) => !n.data.removing);
         const edges = allEdges.filter((e) => !e.data?.dropping);
-        const nodeIds = new Set(nodes.map((n) => n.id));
-        const edgeIds = new Set(edges.map((e) => e.id));
+        // A block whose id comes back with another type (an undo, a preset) is a new block.
+        const nodeIds = new Set(nodes.filter((n) => (this.modules.get(n.id)?.type ?? n.data.type) === n.data.type).map((n) => n.id));
+        const edgeIds = new Set(edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target)).map((e) => e.id));
 
         // 1. Removed cables (before modules, to disconnect cleanly).
         for (const [id, c] of this.cables) {
@@ -276,7 +278,7 @@ class AudioEngine {
         const meter = new Tone.Meter({ smoothing: 0.85 });
         const tap = instance.output("out") ?? instance.input("in");
         if (tap) (tap as Tone.ToneAudioNode).connect(meter);
-        this.modules.set(node.id, { instance, params: node.data.params, meter });
+        this.modules.set(node.id, { type: node.data.type, instance, params: node.data.params, meter });
         if (this.running) instance.start?.();
     }
 }

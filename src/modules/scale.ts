@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import { SOURCE_LEVEL, type ModuleDef, type TriggerListener } from "./types";
+import { frequencyOf, midiC } from "./notes";
 
 /** Degrees of each scale, in semitones from the root. */
 const SCALES = [
@@ -13,10 +14,6 @@ const OCTAVES = [3, 4, 5];
 /** Range covered by the signal, in octaves. */
 const SPAN = 2;
 
-const NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
-/** Name of a MIDI note, e.g. 67 → "G4". */
-export const noteName = (midi: number) => `${NAMES[midi % 12]}${Math.floor(midi / 12) - 1}`;
-const frequencyOf = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
 /**
  * Turns a signal into in-tune notes: on each trigger, the signal value (−1 … 1)
@@ -54,7 +51,7 @@ export const scale: ModuleDef = {
             notes.push(SPAN * 12);
             const m = Math.max(-1, Math.min(1, (meter.getValue() as number) / SOURCE_LEVEL || 0));
             const index = Math.round(((m + 1) / 2) * (notes.length - 1));
-            return 12 * ((OCTAVES[v.octave] ?? 4) + 1) + (ROOTS[v.root] ?? 0) + notes[index];
+            return midiC(OCTAVES[v.octave] ?? 4) + (ROOTS[v.root] ?? 0) + notes[index];
         };
 
         return {

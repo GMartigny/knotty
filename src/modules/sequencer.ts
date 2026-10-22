@@ -3,8 +3,8 @@ import { onSixteenth } from "../audio/clock";
 import type { ModuleDef, ParamDef, TriggerListener } from "./types";
 
 /** Rows shown by a new sequencer, and the most it can have. */
-export const SEQ_ROWS = 4;
-export const SEQ_MAX_ROWS = 16;
+const SEQ_ROWS = 4;
+const SEQ_MAX_ROWS = 16;
 export const SEQ_STEPS = 16;
 
 /** Starting patterns, one integer per row: bit i turns step i on. */
@@ -44,8 +44,8 @@ export const sequencer: ModuleDef = {
         inline: true,
     })),
     params: [
-        // The tempo drives the whole sequencer: no modulation.
-        { id: "bpm", label: "Tempo", min: 50, max: 200, default: 110, step: 1, unit: "bpm", modulatable: false },
+        // The tempo is the transport's, shared by all sequencers (and the Echo): no modulation.
+        { id: "bpm", label: "Tempo", min: 50, max: 200, default: 110, step: 1, unit: "bpm", modulatable: false, shared: true },
         // Number of rows, set by dragging the block's bottom edge.
         { id: "rows", label: "Rows", min: 1, max: SEQ_MAX_ROWS, default: SEQ_ROWS, hidden: true },
         ...rowParams,

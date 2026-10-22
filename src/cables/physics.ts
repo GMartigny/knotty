@@ -56,6 +56,11 @@ export const physics = {
         entries.get(id)?.rope.release(end);
         wake();
     },
+    /** Plugs both ends back in. */
+    reattach(id: string) {
+        entries.get(id)?.rope.reattach();
+        wake();
+    },
     remove(id: string) {
         entries.delete(id);
     },

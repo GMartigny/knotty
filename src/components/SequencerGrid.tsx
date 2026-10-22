@@ -32,10 +32,10 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
 
     return (
         <div className="seq" role="grid" aria-label="Sequencer steps">
-            {Array.from({ length: SEQ_ROWS }, (_, row) => {
+            {Array.from({ length: params.rows ?? SEQ_ROWS }, (_, row) => {
                 const pattern = params[rowParam(row)] ?? 0;
                 return (
-                    <div className="seq-row" role="row" key={row}>
+                    <div className="seq-row" role="row" key={row} data-row={row}>
                         <span className="seq-row-label" aria-hidden>
                             {row + 1}
                         </span>

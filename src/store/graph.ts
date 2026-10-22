@@ -78,6 +78,8 @@ interface GraphState {
     addModule(type: string, position: XYPosition): void;
     setParam(nodeId: string, paramId: string, value: number): void;
     setText(nodeId: string, text: string): void;
+    /** Changes how many rows a block shows (Sequencer, Mixer); cables on removed rows fall. */
+    setRows(nodeId: string, rows: number): void;
     removeNode(nodeId: string): void;
     /** Removes all blocks, in a cascade. */
     clearAll(): void;
@@ -159,7 +161,7 @@ export const useGraph = create<GraphState>((set, get) => ({
 
     startGrab(grab) {
         const node = get().nodes.find((n) => n.id === grab.nodeId);
-        const kind = node && portKind(node.data.type, grab.handleId, grab.side === "source" ? "out" : "in");
+        const kind = node && portKind(node.data.type, grab.handleId, grab.side === "source" ? "out" : "in", node.data.params);
         const plugged = get().edges.some((e) => isLive(e) && attachedTo(e, grab));
         set({ grab: { ...grab, kind, plugged } });
     },
@@ -190,8 +192,8 @@ export const useGraph = create<GraphState>((set, get) => ({
         const src = nodes.find((n) => n.id === source);
         const dst = nodes.find((n) => n.id === target);
         if (!src || !dst) return false;
-        const outKind = portKind(src.data.type, sourceHandle ?? "", "out");
-        const inKind = portKind(dst.data.type, targetHandle ?? "", "in");
+        const outKind = portKind(src.data.type, sourceHandle ?? "", "out", src.data.params);
+        const inKind = portKind(dst.data.type, targetHandle ?? "", "in", dst.data.params);
         if (!outKind || !inKind || !compatible(outKind, inKind)) return false;
         const duplicate = edges.some(
             (e) =>
@@ -225,6 +227,23 @@ export const useGraph = create<GraphState>((set, get) => ({
                 n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
             ),
         }),
+
+    setRows(nodeId, rows) {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        const def = node && registry[node.data.type];
+        if (!node || !def?.rows) return;
+        const count = Math.round(Math.min(def.rows.max, Math.max(def.rows.min, rows)));
+        if (count === node.data.params[def.rows.param]) return;
+        get().setParam(nodeId, def.rows.param, count);
+        // Cables plugged into a row that just disappeared come loose on this block's side.
+        const params = get().nodes.find((n) => n.id === nodeId)!.data.params;
+        for (const e of get().edges.filter(isLive)) {
+            if (e.source === nodeId && !portKind(def.type, e.sourceHandle ?? "out", "out", params))
+                get().unplug({ nodeId, handleId: e.sourceHandle ?? "out", side: "source" });
+            if (e.target === nodeId && !portKind(def.type, e.targetHandle ?? "in", "in", params))
+                get().unplug({ nodeId, handleId: e.targetHandle ?? "in", side: "target" });
+        }
+    },
 
     setText: (nodeId, text) =>
         set({ nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)) }),

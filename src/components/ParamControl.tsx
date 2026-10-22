@@ -24,9 +24,11 @@ interface Props {
     onChange(value: number): void;
     /** A cable is plugged into this setting's modulation socket. */
     modulated?: boolean;
+    /** Row index on a block with a variable number of rows, used to measure row height. */
+    row?: number;
 }
 
-export function ParamControl({ def, value, onChange, modulated }: Props) {
+export function ParamControl({ def, value, onChange, modulated, row }: Props) {
     const inputId = useId();
     if (def.options) {
         return (
@@ -52,7 +54,7 @@ export function ParamControl({ def, value, onChange, modulated }: Props) {
 
     const t = toSlider(def, value);
     return (
-        <div className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""}`}>
+        <div className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""}`} data-row={row}>
             <label className="param-label" htmlFor={inputId}>
                 {def.label}
                 <output>

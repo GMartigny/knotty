@@ -1,4 +1,4 @@
-import { isModulatable, modParamOf, type ModuleCategory, type ModuleDef, type PortKind } from "./types";
+import { isActive, isModulatable, modParamOf, type ModuleCategory, type ModuleDef, type ParamValues, type PortKind } from "./types";
 import { noise } from "./noise";
 import { filter } from "./filter";
 import { reverb } from "./reverb";
@@ -29,18 +29,24 @@ export const categoryColor: Record<ModuleCategory, string> = {
     note: "#fff6e5",
 };
 
-export const portKind = (type: string, portId: string, side: "in" | "out"): PortKind | undefined => {
+/**
+ * Signal kind of a block's socket, or `undefined` if it doesn't exist.
+ * With `params`, a socket on a hidden row (see `ModuleDef.rows`) doesn't exist either.
+ */
+export const portKind = (type: string, portId: string, side: "in" | "out", params?: ParamValues): PortKind | undefined => {
     const def = registry[type];
     if (!def) return undefined;
+    const active = (item: { row?: number }) => !params || isActive(def, params, item);
     if (side === "in") {
         const paramId = modParamOf(portId);
         if (paramId) {
             const p = def.params.find((d) => d.id === paramId);
-            return p && isModulatable(p) ? "mod" : undefined;
+            return p && isModulatable(p) && active(p) ? "mod" : undefined;
         }
     }
     const ports = side === "in" ? def.inputs : def.outputs;
-    return ports.find((p) => p.id === portId)?.kind;
+    const port = ports.find((p) => p.id === portId);
+    return port && active(port) ? port.kind : undefined;
 };
 
 /** Can an output plug into an input? Audio also works as a modulation signal. */

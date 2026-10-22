@@ -857,29 +857,32 @@ button {
 /* ——— Clear all ——— */
 
 .clear-button {
+    --p: 0;
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 24px;
+    right: 24px;
     z-index: 5;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: grid;
+    place-items: center;
+    width: 64px;
     height: 64px;
-    min-width: 64px;
-    padding: 0 12px;
-    justify-content: center;
-    border-radius: 999px;
+    padding: 0;
+    border-radius: 50%;
     border: 4px solid var(--ink);
-    background: var(--cream);
+    /* Turns from cream to red as the hold progresses. */
+    background: color-mix(in srgb, #ff5d5d calc(var(--p) * 100%), var(--cream));
     box-shadow: 0 6px 0 var(--ink);
     font-weight: 700;
-    transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+    touch-action: none;
+    user-select: none;
+    transition: transform 0.1s, box-shadow 0.1s;
 }
 
 .clear-x {
     font-size: 2.6rem;
     line-height: 1;
     margin-top: -4px;
+    scale: calc(1 + var(--p) * 0.25);
 }
 
 .clear-button:hover {
@@ -887,31 +890,71 @@ button {
     box-shadow: 0 8px 0 var(--ink);
 }
 
-.clear-button:active {
+.clear-button.is-holding {
     transform: translateY(5px);
     box-shadow: 0 1px 0 var(--ink);
 }
 
-.clear-button.is-armed {
-    padding: 0 22px 0 16px;
-    background: #ff5d5d;
-    animation: clear-shake 0.35s;
+/* Ring around the button, filled clockwise from the top as the hold progresses. */
+.clear-ring {
+    position: absolute;
+    inset: -16px;
+    width: calc(100% + 32px);
+    height: calc(100% + 32px);
+    rotate: -90deg;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.clear-ring circle {
+    fill: none;
+    stroke-width: 8;
+    stroke-linecap: round;
+}
+
+.clear-ring-track {
+    stroke: rgba(26, 27, 58, 0.35);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.clear-ring-fill {
+    stroke: #ff5d5d;
+    stroke-dasharray: 1;
+    stroke-dashoffset: calc(1 - var(--p));
+    filter: drop-shadow(0 0 calc(var(--p) * 10px) #ff5d5d);
+}
+
+.clear-button.is-holding .clear-ring-track {
+    opacity: 1;
+}
+
+/* Let go too early: the ring empties back smoothly. */
+.clear-button:not(.is-holding) .clear-ring-fill {
+    transition: stroke-dashoffset 0.3s ease-out;
 }
 
 .clear-label {
-    font-size: 1.05rem;
+    position: absolute;
+    right: calc(100% + 26px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 3px solid var(--ink);
+    background: var(--cream);
+    color: var(--ink);
+    font-size: 1rem;
+    white-space: nowrap;
+    opacity: 0;
+    translate: 8px 0;
+    pointer-events: none;
+    transition: opacity 0.15s, translate 0.15s;
 }
 
-@keyframes clear-shake {
-    25% {
-        transform: rotate(-5deg);
-    }
-    50% {
-        transform: rotate(4deg);
-    }
-    75% {
-        transform: rotate(-2deg);
-    }
+.clear-button:hover .clear-label,
+.clear-button:focus-visible .clear-label,
+.clear-button.is-holding .clear-label {
+    opacity: 1;
+    translate: 0 0;
 }
 
 /* ——— Start ——— */
@@ -1100,6 +1143,7 @@ button {
 /* ——— Comment: resizable text frame, behind the blocks ——— */
 
 .comment {
+    position: relative;
     width: 100%;
     height: 100%;
     border: 3px dashed rgba(255, 246, 229, 0.45);
@@ -1128,10 +1172,40 @@ button {
     color: var(--cream);
 }
 
-.comment-icon {
-    font-size: 26px;
-    line-height: 40px;
+.comment-grip {
+    flex: none;
+    width: 32px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-size: 24px;
+    line-height: 1;
     opacity: 0.7;
+    cursor: grab;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.comment-grip:hover {
+    opacity: 1;
+    background: rgba(255, 246, 229, 0.15);
+}
+
+.react-flow__node.dragging .comment-grip {
+    cursor: grabbing;
+}
+
+/*
+ * The frame lets clicks through to the mat (panning, selection) and to the blocks inside it:
+ * only its header and resize handles catch the pointer.
+ */
+.react-flow__node:has(> .comment) {
+    pointer-events: none;
+}
+
+.comment-head,
+.comment .react-flow__resize-control {
+    pointer-events: all;
 }
 
 .comment-text {
@@ -1185,4 +1259,49 @@ button {
 .react-flow__node:hover .comment-handle,
 .comment.is-selected .comment-handle {
     opacity: 1;
+}
+
+/* ——— Row resizer: grip on the bottom edge of the Sequencer and Mixer ——— */
+
+.row-resizer {
+    position: absolute;
+    left: 50%;
+    bottom: -12px;
+    translate: -50% 0;
+    width: 64px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    cursor: ns-resize;
+    touch-action: none;
+}
+
+.row-resizer-grip {
+    width: 44px;
+    height: 10px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    background: var(--cream);
+    /* Two little lines, like a grip. */
+    background-image: linear-gradient(var(--ink), var(--ink)), linear-gradient(var(--ink), var(--ink));
+    background-size: 22px 2px;
+    background-position: center 1px, center 4px;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.block:hover .row-resizer-grip,
+.row-resizer:focus-visible .row-resizer-grip,
+.row-resizer:active .row-resizer-grip {
+    opacity: 1;
+}
+
+.row-resizer:hover .row-resizer-grip {
+    transform: scaleX(1.15);
+    background-color: var(--accent);
+}
+
+.row-resizer:focus-visible {
+    outline: none;
 }

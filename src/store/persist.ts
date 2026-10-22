@@ -46,13 +46,14 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
             };
         });
 
-    const typeOf = new Map(nodes.map((n) => [n.id, n.data.type]));
+    const byId = new Map(nodes.map((n) => [n.id, n.data]));
     const edges: CableEdge[] = saved.edges.flatMap((e) => {
-        const srcType = typeOf.get(e.source);
-        const dstType = typeOf.get(e.target);
-        if (!srcType || !dstType) return [];
-        const out = portKind(srcType, e.sourceHandle, "out");
-        const into = portKind(dstType, e.targetHandle, "in");
+        const src = byId.get(e.source);
+        const dst = byId.get(e.target);
+        if (!src || !dst) return [];
+        // Sockets on hidden rows don't count: their cables are dropped.
+        const out = portKind(src.type, e.sourceHandle, "out", src.params);
+        const into = portKind(dst.type, e.targetHandle, "in", dst.params);
         if (!out || !into || !compatible(out, into)) return [];
         return [
             {

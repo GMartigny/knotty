@@ -11,7 +11,8 @@ import { FilterCurve } from "./FilterCurve";
 import { MiniPiano } from "./MiniPiano";
 import { NoteDisplay } from "./NoteDisplay";
 import { CommentBlock } from "./CommentBlock";
-import { modPort, type PortDef } from "../modules/types";
+import { isActive, modPort, rowCount, type PortDef } from "../modules/types";
+import { RowResizer } from "./RowResizer";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
 
@@ -127,11 +128,12 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                     {def.type === "filter" && <FilterCurve params={data.params} />}
                     {def.type === "sine" && <MiniScope nodeId={id} frequency={data.params.frequency} shape={data.params.shape ?? 0} />}
                     {def.params
-                        .filter((p) => !p.hidden)
+                        .filter((p) => !p.hidden && isActive(def, data.params, p))
                         .map((p) => (
                             <ParamControl
                                 key={p.id}
                                 def={p}
+                                row={p.row}
                                 value={data.params[p.id]}
                                 modulated={plugged.has(modPort(p.id))}
                                 onChange={(v) => setParam(id, p.id, v)}
@@ -143,6 +145,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                 </div>
             )}
 
+            {def.rows && <RowResizer nodeId={id} def={{ ...def, rows: def.rows }} rows={rowCount(def, data.params)} />}
             {compact && <EdgeSockets ports={def.inputs} side="in" />}
             <EdgeSockets ports={def.outputs} side="out" />
         </div>

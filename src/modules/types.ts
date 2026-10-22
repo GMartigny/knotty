@@ -12,6 +12,8 @@ export interface PortDef {
     label?: string;
     /** The socket is placed by the block's custom body, not automatically. */
     inline?: boolean;
+    /** Row this socket belongs to, on a block with a variable number of rows (see `ModuleDef.rows`). */
+    row?: number;
 }
 
 /** Trigger at audio time `time`, optionally with a note (frequency in Hz). */
@@ -35,6 +37,8 @@ export interface ParamDef {
     modulatable?: false;
     /** Audio input shown on this slider's row (e.g. a Mixer channel). */
     inputPort?: string;
+    /** Row this setting belongs to, on a block with a variable number of rows (see `ModuleDef.rows`). */
+    row?: number;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";
@@ -132,8 +136,21 @@ export interface ModuleDef {
     inputs: PortDef[];
     outputs: PortDef[];
     params: ParamDef[];
+    /**
+     * Variable number of rows, set by dragging the block's bottom edge and stored in the `param` setting.
+     * Sockets and settings tagged with a `row` beyond that count are hidden and can't be plugged.
+     */
+    rows?: { param: string; min: number; max: number };
     create(params: ParamValues): ModuleInstance;
 }
+
+/** Number of rows shown by a block (or `Infinity` if it has a fixed layout). */
+export const rowCount = (def: ModuleDef, params: ParamValues) =>
+    def.rows ? (params[def.rows.param] ?? def.params.find((p) => p.id === def.rows!.param)?.default ?? def.rows.max) : Infinity;
+
+/** Is this socket or setting part of a visible row? */
+export const isActive = (def: ModuleDef, params: ParamValues, item: { row?: number }) =>
+    item.row === undefined || item.row < rowCount(def, params);
 
 export const defaultParams = (def: ModuleDef): ParamValues =>
     Object.fromEntries(def.params.map((p) => [p.id, p.default]));

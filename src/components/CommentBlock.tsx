@@ -14,8 +14,9 @@ export function CommentBlock({ id, data, selected }: NodeProps<ModuleNode>) {
             {/* Handles on the corners and edges, visible on hover. */}
             <NodeResizer minWidth={160} minHeight={90} handleClassName="comment-handle" lineClassName="comment-line" />
             <header className="comment-head">
-                <span className="comment-icon" aria-hidden>
-                    ✎
+                {/* The only place to grab the frame to move it. */}
+                <span className="comment-grip" title="Move" aria-hidden>
+                    ⠿
                 </span>
                 <textarea
                     className="comment-text nodrag nowheel"

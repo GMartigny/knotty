@@ -21,7 +21,9 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 **Modulation**: every continuous slider has a `mod:<setting>` socket. The signal is added to the slider position: ±half the range, or ±100% of the value on a log scale, for a source at its normal level (`SOURCE_LEVEL`). Audio parameters are modulated in real time (`modTarget`, via `DrivenParam` in `src/modules/mod.ts`, because Tone.js resets a parameter to zero as soon as a signal is connected to it); Envelope times are read on each trigger (`setModSource`). A setting marked `modulatable: false` has no socket.
 
-**Comment**: a `comment` node with no sound or sockets, rendered by `CommentBlock` behind blocks and cables (`zIndex: -1`, `elevateNodesOnSelect={false}`), resizable with `NodeResizer`.
+**Variable rows**: a `ModuleDef` with `rows` (Sequencer, Mixer) stores its row count in a hidden setting, changed by dragging `RowResizer` on the block's bottom edge. Sockets and settings tagged with a `row` beyond that count are hidden, and `portKind(…, params)` treats them as missing; `setRows` unplugs the cables on removed rows.
+
+**Comment**: a `comment` node with no sound or sockets, rendered by `CommentBlock` behind blocks and cables (`zIndex: -1`, `elevateNodesOnSelect={false}`), resizable with `NodeResizer`. It only moves by its grip (`dragHandle`), and the frame itself lets the pointer through to the mat and the blocks.
 
 ## Checking
 

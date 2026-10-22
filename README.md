@@ -33,4 +33,4 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 5. Impulsions lumineuses le long des câbles
 6. ~~Sauvegarde locale, modèles « Groove » et « Doux »~~, partage par URL
 7. ~~Clavier (ordinateur et mini-piano)~~
-8. ~~Écho calé sur le tempo, Distorsion, Gamme (signal → notes justes), mini-onde du Filtre~~
+8. ~~Écho calé sur le tempo, Distorsion, Gamme (signal → notes justes), courbe de réponse du Filtre~~

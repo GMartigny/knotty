@@ -22,11 +22,7 @@ export const filter: ModuleDef = {
         const node = new Tone.Filter({ type: TYPES[values.mode] ?? "lowpass" });
         const frequency = driven(node.frequency, paramDef(params, "frequency"), values.frequency);
         const Q = driven(node.Q, paramDef(params, "Q"), values.Q);
-        // Échantillons de la sortie pour la mini-onde.
-        const waveform = new Tone.Waveform(8192);
-        node.connect(waveform);
         return {
-            scope: () => waveform.getValue(),
             input: () => node,
             output: () => node,
             setParam(id, value) {
@@ -36,7 +32,6 @@ export const filter: ModuleDef = {
             },
             modTarget: (id) => (id === "frequency" ? frequency.modTarget : id === "Q" ? Q.modTarget : undefined),
             dispose: () => {
-                waveform.dispose();
                 frequency.dispose();
                 Q.dispose();
                 node.dispose();

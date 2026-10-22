@@ -1073,3 +1073,26 @@ button {
         animation: none;
     }
 }
+
+/* ——— Courbe du Filtre ——— */
+
+.filter-curve {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--cream-shade);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+}
+
+.filter-zero {
+    stroke: var(--ink);
+    stroke-opacity: 0.2;
+    stroke-width: 1px;
+}
+
+.filter-cut {
+    stroke: var(--ink);
+    stroke-width: 1.5px;
+    stroke-dasharray: 3 3;
+}

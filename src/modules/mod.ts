@@ -24,10 +24,19 @@ export class DrivenParam {
         this.base.rampTo(value, 0.05);
     }
 
-    /** Saut immédiat à une valeur, à l'heure audio `time` (ex. une note jouée). */
-    jump(value: number, time: number) {
-        this.base.cancelScheduledValues(time);
-        this.base.setValueAtTime(value, time);
+    /**
+     * Passage à une valeur à l'heure audio `time` (ex. une note jouée) : saut immédiat,
+     * ou glissement exponentiel (naturel pour une fréquence) sur `glide` secondes.
+     */
+    jump(value: number, time: number, glide = 0) {
+        if (glide <= 0) {
+            this.base.cancelScheduledValues(time);
+            this.base.setValueAtTime(value, time);
+            return;
+        }
+        // Repart de la valeur atteinte à cet instant, même si un glissement est en cours.
+        this.base.cancelAndHoldAtTime(time);
+        this.base.exponentialRampToValueAtTime(value, time + glide);
     }
 
     /** Valeur de base en ce moment. */

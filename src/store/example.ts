@@ -66,22 +66,22 @@ function groovePatch(): Patch {
         node("bass-osc", "sine", colSource, row(3) + 20, { shape: 3, frequency: 55 }),
         node("bass-env", "envelope", colEnv, row(3), { attack: 0.004, decay: 0.18, sustain: 0.35, hold: 0.06, release: 0.12 }),
         node("bass-filter", "filter", colFilter, row(3) + 60, { mode: 0, frequency: 520, Q: 7 }),
-        node("lfo", "sine", colSource, row(3) + 290, { shape: 0, frequency: 0.25 }),
+        node("lfo", "sine", colSource, row(3) + 340, { shape: 0, frequency: 0.25 }),
 
         // Mélodie : son propre séquenceur, calé sur le même tempo
-        node("mel-seq", "sequencer", 0, row(4) + 160, {
+        node("mel-seq", "sequencer", 0, row(4) + 220, {
             bpm: 116,
             row0: steps(1, 4, 7, 9, 10, 13, 15),
             row1: 0,
             row2: 0,
             row3: 0,
         }),
-        node("mel-osc", "sine", colSource, row(4) + 160, { shape: 2, frequency: 800 }),
-        node("mel-lfo", "sine", -260, row(4) + 460, { shape: 0, frequency: 0.37 }),
+        node("mel-osc", "sine", colSource, row(4) + 220, { shape: 2, frequency: 800 }),
+        node("mel-lfo", "sine", -260, row(4) + 560, { shape: 0, frequency: 0.37 }),
         // Ampleur du balancement : −14 dB ≈ ±20 % autour de 800 Hz.
-        node("mel-depth", "volume", 80, row(4) + 460, { volume: -14 }),
-        node("mel-env", "envelope", colEnv, row(4) + 140, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
-        node("mel-vol", "volume", colFilter, row(4) + 200, { volume: -5 }),
+        node("mel-depth", "volume", 80, row(4) + 560, { volume: -14 }),
+        node("mel-env", "envelope", colEnv, row(4) + 200, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
+        node("mel-vol", "volume", colFilter, row(4) + 260, { volume: -5 }),
 
         // Mélange et sortie
         node("mix", "mixer", 1380, row(1) + 330, { level1: 100, level2: 55, level3: 35, level4: 65 }),
@@ -166,8 +166,8 @@ function softPatch(): Patch {
  * Groupe (séquenceur « groupe ») — piste 1 : guitare rythmique, power chord Mi + Si en dents de scie,
  * « chug » étouffé calé sur la double pédale, très distordu puis filtré comme un baffle ;
  * piste 2 : basse en croches (carré grave, passe-bas) ; piste 3 : guitare solo — une Gamme mineure
- * en Mi, balayée par une dent de scie lente, donne des montées de notes justes ; vibrato par un sinus
- * à 5,5 Hz atténué ; distorsion, écho, filtre.
+ * pentatonique en Mi, balayée par un triangle lent, donne des phrases qui montent et redescendent ;
+ * notes tenues et glissées, vibrato par un sinus à 5 Hz atténué ; distorsion filtrée comme un baffle, écho.
  *
  * Mixeur général → réverb discrète → sortie.
  */
@@ -209,31 +209,35 @@ function metalPatch(): Patch {
             bpm: 150,
             row0: gallop,
             row1: steps(1, 3, 5, 7, 9, 11, 13, 15),
-            row2: steps(1, 3, 5, 6, 7, 8, 11, 13, 14, 15, 16),
+            // Solo : peu de notes, tenues, en contretemps.
+            row2: steps(1, 4, 7, 9, 12, 15),
             row3: 0,
         }),
         node("gtr-root", "sine", cSrc, 1900, { shape: 3, frequency: 82.4 }),
-        node("gtr-fifth", "sine", cSrc, 2160, { shape: 3, frequency: 123.5 }),
+        node("gtr-fifth", "sine", cSrc, 2230, { shape: 3, frequency: 123.5 }),
         node("gtr-env", "envelope", cEnv, 1900, { attack: 0.003, decay: 0.1, sustain: 0.15, hold: 0.03, release: 0.06 }),
         node("gtr-dist", "distortion", cFx1, 1960, { drive: 45, wet: 1 }),
         node("gtr-cab", "filter", cFx2, 1960, { mode: 0, frequency: 2800, Q: 1.5 }),
 
         // ——— Basse ———
-        node("bass-osc", "sine", cSrc, 2420, { shape: 1, frequency: 41.2 }),
+        node("bass-osc", "sine", cSrc, 2570, { shape: 1, frequency: 41.2 }),
         node("bass-env", "envelope", cEnv, 2380, { attack: 0.004, decay: 0.12, sustain: 0.3, hold: 0.04, release: 0.08 }),
         node("bass-filter", "filter", cFx1, 2440, { mode: 0, frequency: 500, Q: 2 }),
 
         // ——— Guitare solo ———
-        node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 3, frequency: 0.55 }),
-        node("lead-scale", "scale", cSeq, 2920, { scale: 1, root: 2, octave: 1 }),
-        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330 }),
-        node("vibrato", "sine", cSeq - 340, 3280, { shape: 0, frequency: 5.5 }),
-        // Ampleur du vibrato : −32 dB ≈ ±2,5 % (moins d'un quart de ton).
-        node("vibrato-depth", "volume", cSeq, 3300, { volume: -32 }),
-        node("lead-env", "envelope", cEnv, 2880, { attack: 0.01, decay: 0.2, sustain: 0.6, hold: 0.12, release: 0.25 }),
-        node("lead-dist", "distortion", cFx1, 2940, { drive: 20, wet: 1 }),
-        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.35, wet: 0.3 }),
-        node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 4500, Q: 1 }),
+        // Phrases qui montent et redescendent, en pentatonique mineure de Mi, de Mi3 à Mi5.
+        node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 2, frequency: 0.3 }),
+        node("lead-scale", "scale", cSeq, 2920, { scale: 2, root: 2, octave: 0 }),
+        // Le glissé entre les notes évite le côté « 8-bit » des sauts nets.
+        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330, glide: 0.06 }),
+        node("vibrato", "sine", cSeq - 340, 3330, { shape: 0, frequency: 5 }),
+        // Ampleur du vibrato : −28 dB ≈ ±4 % (un peu moins d'un demi-ton).
+        node("vibrato-depth", "volume", cSeq, 3350, { volume: -28 }),
+        node("lead-env", "envelope", cEnv, 2880, { attack: 0.015, decay: 0.3, sustain: 0.75, hold: 0.22, release: 0.35 }),
+        node("lead-dist", "distortion", cFx1, 2940, { drive: 32, wet: 1 }),
+        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.4, wet: 0.35 }),
+        // Filtré bas, comme le baffle d'un ampli : retire le grésillement aigu.
+        node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 2600, Q: 1.8 }),
 
         // ——— Mixage ———
         node("bus", "mixer", cBus, 1700, { level1: 90, level2: 70, level3: 75, level4: 55 }),

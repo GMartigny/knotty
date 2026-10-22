@@ -1324,3 +1324,82 @@ button {
 .row-resizer:focus-visible {
     outline: none;
 }
+
+/* ——— Random: the die ——— */
+
+.dice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dice-face {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 0 var(--ink);
+}
+
+.dice-face.is-rolled {
+    animation: dice-roll 0.28s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.dice-pips {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    place-items: center;
+}
+
+.dice-pips .pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink);
+}
+
+.dice-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* One notch per possible value, from low (left) to high (right); the one that came up is lit. */
+.dice-scale {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 36px;
+}
+
+.dice-scale span {
+    flex: 1;
+    min-width: 2px;
+    border-radius: 2px;
+    background: var(--cream-shade);
+    border: 1px solid rgba(26, 27, 58, 0.35);
+}
+
+.dice-scale span.is-on {
+    background: var(--accent);
+    border-color: var(--ink);
+}
+
+@keyframes dice-roll {
+    from {
+        transform: rotate(-35deg) scale(0.7);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dice-face.is-rolled {
+        animation: none;
+    }
+}

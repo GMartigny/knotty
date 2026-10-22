@@ -94,7 +94,10 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
             }
 
             const len = samples.length;
-            const perCycle = engine.sampleRate / freq.current;
+            // Fréquence réellement jouée (une note peut avoir remplacé celle du curseur).
+            const hz = engine.pitch(nodeId) ?? freq.current;
+            el.dataset.hz = hz.toFixed(1);
+            const perCycle = engine.sampleRate / hz;
 
             if (perCycle * (MIN_CYCLES + 1) > len) {
                 // Signal lent : la mémoire ne contient pas assez de cycles, la courbe défile.
@@ -107,7 +110,7 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
                     const back = Math.round((now - t) * sr);
                     if (back < len) trail.push({ t, v: samples[len - 1 - back] * gain });
                 }
-                const windowS = Math.min(8, Math.max(1, 2 / freq.current));
+                const windowS = Math.min(8, Math.max(1, 2 / hz));
                 while (trail.length && trail[0].t < now - windowS) trail.shift();
                 const step = Math.max(1, Math.floor(trail.length / 240));
                 draw(trail.filter((_, i) => i % step === 0).map((p) => p.v));

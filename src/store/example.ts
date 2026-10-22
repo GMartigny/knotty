@@ -12,6 +12,8 @@ const node = (id: string, type: string, x: number, y: number, params: ParamValue
     data: { type, params: { ...defaultParams(registry[type]), ...params } },
 });
 
+type Patch = { nodes: ModuleNode[]; edges: CableEdge[] };
+
 const cable = (source: string, sourceHandle: string, target: string, targetHandle: string, kind: PortKind = "audio"): CableEdge => ({
     id: `${source}:${sourceHandle}->${target}:${targetHandle}`,
     source,
@@ -32,7 +34,7 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
  * Mélodie — sur un second séquenceur : triangle vers 800 Hz dont la hauteur est balancée
  * par un sinus lent (atténué par un Volume) ; chaque note tombe ainsi à une hauteur différente.
  */
-export function examplePatch(): { nodes: ModuleNode[]; edges: CableEdge[] } {
+function groovePatch(): Patch {
     // Une ligne par piste ; les enveloppes font ~420 px de haut.
     const colSource = 460;
     const colEnv = 760;
@@ -123,3 +125,52 @@ export function examplePatch(): { nodes: ModuleNode[]; edges: CableEdge[] } {
 
     return { nodes, edges };
 }
+
+/**
+ * Patch « Doux » : un point de départ simple et calme.
+ * Une note de triangle à 330 Hz, découpée par une enveloppe aux attaques et relâchements doux,
+ * adoucie par un passe-bas et noyée dans la réverb, sur un rythme lent et clairsemé.
+ * Un Clavier est déjà branché : il change la note de l'oscillateur et déclenche l'enveloppe.
+ */
+function softPatch(): Patch {
+    const nodes: ModuleNode[] = [
+        node("seq", "sequencer", -120, 330, {
+            bpm: 84,
+            row0: steps(1, 7, 11),
+            row1: 0,
+            row2: 0,
+            row3: 0,
+        }),
+        node("osc", "sine", 60, 0, { shape: 2, frequency: 330 }),
+        node("keys", "keyboard", -120, 600, { octave: 2 }),
+        node("env", "envelope", 380, 0, { attack: 0.03, decay: 0.5, sustain: 0.2, hold: 0.15, release: 0.9 }),
+        node("filter", "filter", 680, 40, { mode: 0, frequency: 1200, Q: 1 }),
+        node("reverb", "reverb", 980, 60, { decay: 4, wet: 0.45 }),
+        node("out", "output", 1280, 100),
+    ];
+    const edges: CableEdge[] = [
+        cable("seq", "row0", "env", "gate", "trigger"),
+        cable("keys", "out", "osc", "note", "trigger"),
+        cable("keys", "out", "env", "gate", "trigger"),
+        cable("osc", "out", "env", "in"),
+        cable("env", "out", "filter", "in"),
+        cable("filter", "out", "reverb", "in"),
+        cable("reverb", "out", "out", "in"),
+    ];
+    return { nodes, edges };
+}
+
+export interface Example {
+    id: string;
+    label: string;
+    description: string;
+    build(): Patch;
+}
+
+/** Modèles proposés au chargement ; le premier est celui de la première visite. */
+export const EXAMPLES: Example[] = [
+    { id: "groove", label: "Groove", description: "Batterie, basse et mélodie sur deux séquenceurs", build: groovePatch },
+    { id: "soft", label: "Doux", description: "Une note calme et un clavier à jouer, idéal pour démarrer", build: softPatch },
+];
+
+export const examplePatch = (id = EXAMPLES[0].id): Patch => (EXAMPLES.find((e) => e.id === id) ?? EXAMPLES[0]).build();

@@ -24,6 +24,17 @@ export class DrivenParam {
         this.base.rampTo(value, 0.05);
     }
 
+    /** Saut immédiat à une valeur, à l'heure audio `time` (ex. une note jouée). */
+    jump(value: number, time: number) {
+        this.base.cancelScheduledValues(time);
+        this.base.setValueAtTime(value, time);
+    }
+
+    /** Valeur de base en ce moment. */
+    get value() {
+        return this.base.getValueAtTime(Tone.now());
+    }
+
     get modTarget(): ModTarget {
         return { param: this.target, depth: this.depth };
     }

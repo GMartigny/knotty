@@ -14,7 +14,8 @@ export interface PortDef {
     inline?: boolean;
 }
 
-export type TriggerListener = (time: number) => void;
+/** Déclenchement à l'heure audio `time`, avec éventuellement une note (fréquence en Hz). */
+export type TriggerListener = (time: number, note?: number) => void;
 
 export interface ParamDef {
     id: string;
@@ -102,14 +103,18 @@ export interface ModuleInstance {
     start?(): void;
     /** Sortie trigger : s'abonner aux déclenchements. Renvoie la fonction de désabonnement. */
     listen?(portId: string, fn: TriggerListener): () => void;
-    /** Entrée trigger : reçoit un déclenchement à l'heure audio `time`. */
-    trigger?(portId: string, time: number): void;
+    /** Entrée trigger : reçoit un déclenchement à l'heure audio `time`, avec la note jouée s'il y en a une. */
+    trigger?(portId: string, time: number, note?: number): void;
     /** Entrée trigger : indique si au moins un câble y est branché. */
     setTriggerConnected?(portId: string, connected: boolean): void;
     /** État affichable (ex. pas courant du séquenceur), lu par l'UI. */
     position?(): number;
     /** Derniers échantillons du signal, pour l'affichage de l'onde. */
     scope?(): Float32Array;
+    /** Fréquence jouée en ce moment (elle peut venir d'une note plutôt que du curseur). */
+    pitch?(): number;
+    /** Action jouée depuis l'interface (ex. une touche du mini-piano). */
+    play?(value: number): void;
     /** Modulation en temps réel d'un réglage, si ce réglage est un paramètre audio. */
     modTarget?(paramId: string): ModTarget | undefined;
     /** Sinon, modulation lue ponctuellement : le moteur fournit une fonction qui renvoie le signal (-1…1). */

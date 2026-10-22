@@ -22,7 +22,7 @@ Les câbles sont typés `audio` ou `trigger` ; les connexions incompatibles et l
 
 **Modulation** : chaque curseur continu a sa prise (anneau bleu ciel), qui accepte un câble son. Le signal s'ajoute à la position du curseur : ±moitié de la plage, ou ±100 % de la valeur sur une échelle log, pour une source à son niveau normal (−12 dB, `SOURCE_LEVEL`). Un Oscillateur branché sur la Fréquence d'un autre donne du vibrato (lent) ou de la FM (rapide). Les paramètres audio (fréquences, résonance, mix, volume) sont modulés en temps réel (`modTarget`, via `DrivenParam` dans `src/modules/mod.ts`, car Tone.js remet un paramètre à zéro dès qu'on y branche un signal) ; les durées de l'Enveloppe sont lues à chaque déclenchement (`setModSource`). Le tempo et la durée de la réverb n'ont pas de prise.
 
-Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion. Comme dans un vrai modulaire, les sources (Oscillateur, Bruit) sonnent en continu ; c'est l'Enveloppe, déclenchée par le Séquenceur, qui les découpe en notes. Sans Déclencheur branché, l'Enveloppe laisse passer le son tel quel.
+Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion, et éventuellement une note (fréquence). Le Clavier (touches de l'ordinateur par position physique, ou mini-piano cliquable) envoie des notes : branché sur l'entrée « Note » d'un Oscillateur, il en fixe la hauteur ; sur le Déclencheur d'une Enveloppe, il la déclenche. Comme dans un vrai modulaire, les sources (Oscillateur, Bruit) sonnent en continu ; c'est l'Enveloppe, déclenchée par le Séquenceur, qui les découpe en notes. Sans Déclencheur branché, l'Enveloppe laisse passer le son tel quel.
 
 ## Feuille de route
 
@@ -31,4 +31,5 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 3. ~~Oscillateur (sinus, carré, triangle, scie) avec mini-oscilloscope~~, débrancher un câble en tirant depuis sa prise
 4. ~~Enveloppe ADSR, Volume, Mixeur 4 voies, prises de modulation sur les curseurs~~, Delay, Distorsion
 5. Impulsions lumineuses le long des câbles
-6. ~~Sauvegarde locale~~, partage par URL
+6. ~~Sauvegarde locale, modèles « Groove » et « Doux »~~, partage par URL
+7. ~~Clavier (ordinateur et mini-piano)~~

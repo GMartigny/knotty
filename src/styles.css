@@ -770,6 +770,80 @@ button {
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
+.example-picker {
+    position: relative;
+    pointer-events: auto;
+}
+
+.example-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.example-caret {
+    display: inline-block;
+    transition: transform 0.15s;
+}
+
+.example-caret.is-open {
+    transform: rotate(180deg);
+}
+
+.example-menu {
+    position: absolute;
+    top: calc(100% + 14px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max(100%, 280px);
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    background: var(--cream);
+    border: var(--outline) solid var(--ink);
+    border-radius: 16px;
+    box-shadow: 0 6px 0 var(--ink);
+    text-align: left;
+    animation: menu-pop 0.14s ease-out;
+}
+
+@keyframes menu-pop {
+    from {
+        transform: translateX(-50%) translateY(-6px) scale(0.96);
+        opacity: 0;
+    }
+}
+
+.example-option {
+    width: 100%;
+    display: grid;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+}
+
+.example-option strong {
+    font-size: 1.05rem;
+}
+
+.example-option span {
+    font-size: 0.85rem;
+    opacity: 0.75;
+}
+
+.example-option:hover,
+.example-option:focus-visible {
+    background: color-mix(in srgb, var(--cable-trigger) 45%, var(--cream));
+    border-color: var(--ink);
+    outline: none;
+}
+
 .example-button:hover {
     transform: translateY(-2px) rotate(-1.5deg);
     box-shadow: 0 8px 0 var(--ink);
@@ -896,4 +970,70 @@ button {
     .palette-item {
         transition: none;
     }
+}
+
+/* ——— Clavier ——— */
+
+.piano {
+    --white-w: 22px;
+    --gap: 3px;
+    position: relative;
+    height: 74px;
+}
+
+.piano-whites {
+    display: flex;
+    gap: var(--gap);
+    height: 100%;
+}
+
+.piano-key {
+    position: relative;
+    padding: 0 0 5px;
+    border: 2px solid var(--ink);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    font-size: 0.62rem;
+    font-weight: 700;
+    transition: transform 0.05s, background 0.05s;
+}
+
+.piano-key.is-white {
+    width: var(--white-w);
+    height: 100%;
+    border-radius: 0 0 7px 7px;
+    background: var(--cream);
+    box-shadow: 0 3px 0 var(--ink);
+}
+
+.piano-blacks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* Une touche noire est centrée sur la jointure entre deux blanches. */
+.piano-black-slot {
+    position: absolute;
+    top: 0;
+    left: calc(var(--slot) * (var(--white-w) + var(--gap)) - var(--gap) / 2 - 8px);
+}
+
+.piano-key.is-black {
+    width: 16px;
+    height: 46px;
+    border-radius: 0 0 5px 5px;
+    background: var(--ink);
+    color: var(--cream);
+    pointer-events: auto;
+    padding-bottom: 3px;
+    font-size: 0.55rem;
+}
+
+.piano-key.is-down {
+    background: var(--cable-trigger);
+    color: var(--ink);
+    transform: translateY(2px);
+    box-shadow: none;
 }

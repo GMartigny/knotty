@@ -16,7 +16,8 @@ export const sine: ModuleDef = {
     label: "Oscillateur",
     icon: "∿",
     category: "source",
-    inputs: [],
+    // Une note reçue (depuis un Clavier) fixe la fréquence jusqu'à la suivante.
+    inputs: [{ id: "note", kind: "trigger", label: "Note" }],
     outputs: [{ id: "out", kind: "audio" }],
     params,
     create(values) {
@@ -29,6 +30,10 @@ export const sine: ModuleDef = {
         source.connect(waveform);
         return {
             scope: () => waveform.getValue(),
+            pitch: () => frequency.value,
+            trigger: (_port, time, note) => {
+                if (note) frequency.jump(note, time);
+            },
             input: () => undefined,
             output: () => source,
             setParam(id, value) {

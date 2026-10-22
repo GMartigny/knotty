@@ -83,6 +83,16 @@ class AudioEngine {
         return this.modules.get(nodeId)?.instance.scope?.();
     }
 
+    /** Action jouée depuis l'interface (ex. une touche cliquée) ; sans effet tant que le son n'est pas lancé. */
+    play(nodeId: string, value: number) {
+        if (this.running) this.modules.get(nodeId)?.instance.play?.(value);
+    }
+
+    /** Fréquence jouée par un module, si elle est connue. */
+    pitch(nodeId: string): number | undefined {
+        return this.modules.get(nodeId)?.instance.pitch?.();
+    }
+
     get sampleRate() {
         return Tone.getContext().sampleRate;
     }
@@ -155,8 +165,8 @@ class AudioEngine {
 
         if (edge.data?.kind === "trigger") {
             if (!src.listen || !dst.trigger) return;
-            const unsubscribe = src.listen(outPort, (time) => {
-                dst.trigger!(inPort, time);
+            const unsubscribe = src.listen(outPort, (time, note) => {
+                dst.trigger!(inPort, time, note);
                 Tone.getDraw().schedule(() => this.pulses.set(edge.id, performance.now()), time);
             });
             const key = `${edge.target}:${inPort}`;

@@ -74,8 +74,8 @@ interface GraphState {
     removeNode(nodeId: string): void;
     /** Supprime tous les blocs, en cascade. */
     clearAll(): void;
-    /** Remplace le tapis par le patch d'exemple. */
-    loadExample(): void;
+    /** Remplace le tapis par un modèle (voir EXAMPLES). */
+    loadExample(id?: string): void;
 }
 
 let counter = 0;
@@ -214,9 +214,9 @@ export const useGraph = create<GraphState>((set, get) => ({
             ),
         }),
 
-    loadExample() {
+    loadExample(id) {
         // Le moteur audio fait la différence : les anciens blocs sont détruits, les nouveaux créés.
-        set(examplePatch());
+        set(examplePatch(id));
     },
 
     clearAll() {

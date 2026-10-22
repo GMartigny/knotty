@@ -1037,3 +1037,39 @@ button {
     transform: translateY(2px);
     box-shadow: none;
 }
+
+/* ——— Gamme ——— */
+
+.note-display {
+    display: grid;
+    place-items: center;
+    height: 48px;
+    background: var(--cream-shade);
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+}
+
+.note-name {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    animation: note-pop 0.18s ease-out;
+}
+
+.note-idle {
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
+
+@keyframes note-pop {
+    from {
+        transform: scale(1.35);
+        color: var(--accent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .note-name {
+        animation: none;
+    }
+}

@@ -13,11 +13,33 @@ const TRAIL_STEP_S = 0.004;
 
 interface Props {
     nodeId: string;
-    /** Fréquence réglée, pour cadrer l'affichage sur quelques cycles. */
-    frequency: number;
+    /**
+     * Fréquence réglée, pour cadrer l'affichage sur quelques cycles. Absente (ex. Filtre) :
+     * la période est estimée sur le signal, et la hauteur de l'onde s'adapte à son niveau.
+     */
+    frequency?: number;
     /** Forme réglée (index dans SHAPES), pour l'aperçu avant le lancement du son. */
-    shape: number;
+    shape?: number;
 }
+
+/** Fenêtre affichée quand le signal n'a pas de période nette (bruit, silence), en secondes. */
+const FREE_WINDOW_S = 0.02;
+
+/**
+ * Période estimée d'après les passages par zéro en montant, sur la fin du tampon.
+ * `undefined` si le signal n'est pas assez régulier (bruit) ou trop faible.
+ */
+const estimatePeriod = (s: Float32Array): number | undefined => {
+    const from = Math.max(1, s.length - 8192);
+    const crossings: number[] = [];
+    for (let i = from; i < s.length; i++) if (s[i - 1] < 0 && s[i] >= 0) crossings.push(i);
+    if (crossings.length < 3) return undefined;
+    const gaps = crossings.slice(1).map((c, i) => c - crossings[i]);
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    const spread = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length);
+    // Écarts trop irréguliers : pas une onde périodique.
+    return spread / mean < 0.15 ? mean : undefined;
+};
 
 /** Forme idéale à la phase t (0…1), entre -1 et 1. */
 const ideal = (shape: number, t: number) => {
@@ -88,14 +110,41 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
             const gain = 1 / SOURCE_LEVEL;
 
             if (!samples) {
-                // Son pas encore lancé : forme idéale sur quelques cycles.
-                draw(Array.from({ length: 241 }, (_, i) => ideal(form.current, (i / 240) * CYCLES)));
+                // Son pas encore lancé : forme idéale sur quelques cycles, ou une ligne plate.
+                draw(
+                    form.current === undefined
+                        ? [0, 0]
+                        : Array.from({ length: 241 }, (_, i) => ideal(form.current!, (i / 240) * CYCLES)),
+                );
+                return;
+            }
+
+            if (freq.current === undefined) {
+                // Signal quelconque (Filtre) : période estimée, hauteur adaptée au niveau.
+                const period = estimatePeriod(samples);
+                const len = samples.length;
+                const span = Math.round(period ? Math.min(period * CYCLES, len - 1 - period) : engine.sampleRate * FREE_WINDOW_S);
+                let start = len - span - 1;
+                if (period) {
+                    for (let i = len - span - 1; i > 0; i--) {
+                        if (samples[i - 1] < 0 && samples[i] >= 0) {
+                            start = i;
+                            break;
+                        }
+                    }
+                }
+                const step = Math.max(1, Math.floor(span / 160));
+                const raw: number[] = [];
+                for (let i = start; i <= start + span; i += step) raw.push(samples[i]);
+                const peak = raw.reduce((m, x) => Math.max(m, Math.abs(x)), 0);
+                // Silence : ligne plate plutôt que du bruit de fond agrandi.
+                draw(peak < 0.003 ? [0, 0] : raw.map((x) => (x / peak) * 0.9));
                 return;
             }
 
             const len = samples.length;
             // Fréquence réellement jouée (une note peut avoir remplacé celle du curseur).
-            const hz = engine.pitch(nodeId) ?? freq.current;
+            const hz = engine.pitch(nodeId) ?? freq.current!;
             el.dataset.hz = hz.toFixed(1);
             const perCycle = engine.sampleRate / hz;
 

@@ -9,9 +9,12 @@ import { envelope } from "./envelope";
 import { volume } from "./volume";
 import { mixer } from "./mixer";
 import { keyboard } from "./keyboard";
+import { echo } from "./echo";
+import { distortion } from "./distortion";
+import { scale } from "./scale";
 
 /** Ajouter un module = l'importer ici. */
-const modules: ModuleDef[] = [sequencer, keyboard, sine, noise, envelope, mixer, volume, filter, reverb, output];
+const modules: ModuleDef[] = [sequencer, keyboard, scale, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
 

@@ -8,6 +8,7 @@ import { SequencerGrid } from "./SequencerGrid";
 import { EnvelopeShape } from "./EnvelopeShape";
 import { MiniScope } from "./MiniScope";
 import { MiniPiano } from "./MiniPiano";
+import { NoteDisplay } from "./NoteDisplay";
 import { modPort, type PortDef } from "../modules/types";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
@@ -115,6 +116,8 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
                     {def.idleHint && !plugged.has(def.idleHint.port) && <p className="idle-hint">{def.idleHint.text}</p>}
                     {def.type === "envelope" && <EnvelopeShape params={data.params} />}
                     {def.type === "keyboard" && <MiniPiano nodeId={id} />}
+                    {def.type === "scale" && <NoteDisplay nodeId={id} />}
+                    {def.type === "filter" && <MiniScope nodeId={id} />}
                     {def.type === "sine" && <MiniScope nodeId={id} frequency={data.params.frequency} shape={data.params.shape ?? 0} />}
                     {def.params
                         .filter((p) => !p.hidden)

@@ -12,9 +12,10 @@ import { keyboard } from "./keyboard";
 import { echo } from "./echo";
 import { distortion } from "./distortion";
 import { scale } from "./scale";
+import { comment } from "./comment";
 
 /** Ajouter un module = l'importer ici. */
-const modules: ModuleDef[] = [sequencer, keyboard, scale, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output];
+const modules: ModuleDef[] = [sequencer, keyboard, scale, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output, comment];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
 
@@ -25,6 +26,7 @@ export const categoryColor: Record<ModuleCategory, string> = {
     effect: "#4ecdc4",
     sequencer: "#ffd166",
     output: "#a78bfa",
+    note: "#fff6e5",
 };
 
 export const portKind = (type: string, portId: string, side: "in" | "out"): PortKind | undefined => {

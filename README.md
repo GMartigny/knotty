@@ -24,6 +24,8 @@ Les câbles sont typés `audio` ou `trigger` ; les connexions incompatibles et l
 
 Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigger`) à la sortie (`listen`) et transmet l'heure audio de chaque impulsion, et éventuellement une note (fréquence). Le Clavier (touches de l'ordinateur par position physique, ou mini-piano cliquable) envoie des notes : branché sur l'entrée « Note » d'un Oscillateur, il en fixe la hauteur ; sur le Déclencheur d'une Enveloppe, il la déclenche. Comme dans un vrai modulaire, les sources (Oscillateur, Bruit) sonnent en continu ; c'est l'Enveloppe, déclenchée par le Séquenceur, qui les découpe en notes. Sans Déclencheur branché, l'Enveloppe laisse passer le son tel quel.
 
+**Commentaire** : un cadre redimensionnable avec un texte, posé derrière les blocs et les câbles (`zIndex: -1`), pour nommer les parties d'une composition. Il n'a ni son ni prise ; son texte et sa taille sont enregistrés avec le patch. Le modèle « Métal » en utilise pour séparer batterie, groupe, solos et mixage.
+
 ## Feuille de route
 
 1. ~~Bruit → Filtre → Réverb → Sortie, câbles Verlet~~
@@ -34,3 +36,4 @@ Un câble trigger ne transporte pas de son : le moteur abonne l'entrée (`trigge
 6. ~~Sauvegarde locale, modèles « Doux », « Groove » et « Métal »~~, partage par URL
 7. ~~Clavier (ordinateur et mini-piano)~~
 8. ~~Écho calé sur le tempo, Distorsion, Gamme (signal → notes justes), courbe de réponse du Filtre~~
+9. ~~Commentaires (cadres redimensionnables)~~, déplacer un cadre avec les blocs qu'il contient

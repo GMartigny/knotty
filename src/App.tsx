@@ -82,6 +82,8 @@ function Workbench() {
                     isValidConnection={isValidConnection}
                     connectionLineComponent={DraggingCable}
                     connectionRadius={40}
+                    // Un Commentaire sélectionné reste derrière les blocs.
+                    elevateNodesOnSelect={false}
                     deleteKeyCode={["Backspace", "Delete"]}
                     onBeforeDelete={async ({ nodes: deletedNodes, edges: deletedEdges }) => {
                         // Suppression au clavier : les blocs tombent (et leurs câbles avec eux) ;

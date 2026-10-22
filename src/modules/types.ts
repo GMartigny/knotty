@@ -37,7 +37,7 @@ export interface ParamDef {
     inputPort?: string;
 }
 
-export type ModuleCategory = "source" | "effect" | "sequencer" | "output";
+export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";
 
 export type ParamValues = Record<string, number>;
 

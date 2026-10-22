@@ -10,6 +10,7 @@ import { MiniScope } from "./MiniScope";
 import { FilterCurve } from "./FilterCurve";
 import { MiniPiano } from "./MiniPiano";
 import { NoteDisplay } from "./NoteDisplay";
+import { CommentBlock } from "./CommentBlock";
 import { modPort, type PortDef } from "../modules/types";
 
 const portOffset = (index: number, count: number) => `${((index + 1) / (count + 1)) * 100}%`;
@@ -53,7 +54,12 @@ function InputRows({ ports }: { ports: PortDef[] }) {
     );
 }
 
-export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: NodeProps<ModuleNode>) {
+/** Un nœud du tapis : un bloc sonore, ou un Commentaire (cadre de texte). */
+export const ModuleBlock = memo(function ModuleBlock(props: NodeProps<ModuleNode>) {
+    return props.data.type === "comment" ? <CommentBlock {...props} /> : <SoundBlock {...props} />;
+});
+
+function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const def = registry[data.type];
     const setParam = useGraph((s) => s.setParam);
     const removeNode = useGraph((s) => s.removeNode);
@@ -141,4 +147,4 @@ export const ModuleBlock = memo(function ModuleBlock({ id, data, selected }: Nod
             <EdgeSockets ports={def.outputs} side="out" />
         </div>
     );
-});
+}

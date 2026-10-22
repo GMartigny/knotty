@@ -1,6 +1,7 @@
 import { registry } from "../modules/registry";
 import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
 import type { CableEdge, ModuleNode } from "./graph";
+import { commentFrame } from "../modules/comment";
 
 /** Motif de 16 pas à partir des numéros de pas allumés (1 à 16). */
 const steps = (...on: number[]) => on.reduce((pattern, s) => pattern | (1 << (s - 1)), 0);
@@ -10,6 +11,13 @@ const node = (id: string, type: string, x: number, y: number, params: ParamValue
     type: "module",
     position: { x, y },
     data: { type, params: { ...defaultParams(registry[type]), ...params } },
+});
+
+/** Cadre de Commentaire (derrière les blocs) pour nommer une partie du patch. */
+const note = (id: string, x: number, y: number, width: number, height: number, text: string): ModuleNode => ({
+    ...node(id, "comment", x, y),
+    data: { type: "comment", params: {}, text },
+    ...commentFrame(width, height),
 });
 
 type Patch = { nodes: ModuleNode[]; edges: CableEdge[] };
@@ -184,9 +192,16 @@ function metalPatch(): Patch {
     const cBus = 2300;
     const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
     const dry = { attack: 0.001, sustain: 0, hold: 0.005 };
-    const HARM_Y = 3700;
+    const SOLO_Y = 3000;
+    const HARM_Y = SOLO_Y + 780;
 
     const nodes: ModuleNode[] = [
+        // ——— Cadres de commentaire, pour s'y retrouver ———
+        note("note-drums", -40, -70, 1360, 1900, "Batterie : grosse caisse, caisse claire, charleston et cymbale"),
+        note("note-band", -40, 1845, 1660, 1040, "Guitare rythmique (power chord Mi + Si) et basse"),
+        note("note-solo", -380, SOLO_Y - 100, 2300, 1320, "Deux guitares solo en harmonie : la seconde joue une tierce au-dessus"),
+        note("note-mix", 1940, 630, 1220, 1370, "Mixage : chaque piste → réverb → sortie"),
+
         // ——— Batterie ———
         node("drums", "sequencer", cSeq, 700, {
             bpm: 150,
@@ -228,18 +243,18 @@ function metalPatch(): Patch {
 
         // ——— Guitare solo ———
         // Phrases qui montent et redescendent, en Mi mineur, de Mi3 à Mi5.
-        node("lead-sweep", "sine", cSeq - 340, 2920, { shape: 2, frequency: 0.3 }),
-        node("lead-scale", "scale", cSeq, 2920, { scale: 1, root: 2, octave: 0 }),
+        node("lead-sweep", "sine", cSeq - 340, SOLO_Y, { shape: 2, frequency: 0.3 }),
+        node("lead-scale", "scale", cSeq, SOLO_Y, { scale: 1, root: 2, octave: 0 }),
         // Glissé très court : lie les notes sans l'effet « sirène ».
-        node("lead-osc", "sine", cSrc, 2920, { shape: 3, frequency: 330, glide: 0.015 }),
-        node("vibrato", "sine", cSeq - 340, 3330, { shape: 0, frequency: 6 }),
+        node("lead-osc", "sine", cSrc, SOLO_Y, { shape: 3, frequency: 330, glide: 0.015 }),
+        node("vibrato", "sine", cSeq - 340, SOLO_Y + 410, { shape: 0, frequency: 6 }),
         // Ampleur du vibrato : −40 dB ≈ ±1 %, juste de quoi faire vivre les notes tenues.
-        node("vibrato-depth", "volume", cSeq, 3350, { volume: -40 }),
-        node("lead-env", "envelope", cEnv, 2880, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
-        node("lead-dist", "distortion", cFx1, 2940, { drive: 45, wet: 1 }),
-        node("lead-echo", "echo", cFx2, 2940, { time: 2, feedback: 0.3, wet: 0.2 }),
+        node("vibrato-depth", "volume", cSeq, SOLO_Y + 430, { volume: -40 }),
+        node("lead-env", "envelope", cEnv, SOLO_Y - 40, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
+        node("lead-dist", "distortion", cFx1, SOLO_Y + 20, { drive: 45, wet: 1 }),
+        node("lead-echo", "echo", cFx2, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
         // Filtré bas, comme le baffle d'un ampli : retire le grésillement aigu.
-        node("lead-filter", "filter", cFx3, 2940, { mode: 0, frequency: 2600, Q: 1.8 }),
+        node("lead-filter", "filter", cFx3, SOLO_Y + 20, { mode: 0, frequency: 2600, Q: 1.8 }),
         // Seconde guitare : Sol majeur a les mêmes notes que Mi mineur, décalées d'un degré,
         // donc pour un même signal elle joue la tierce au-dessus de la première.
         node("harm-scale", "scale", cSeq, HARM_Y, { scale: 0, root: 4, octave: 0 }),

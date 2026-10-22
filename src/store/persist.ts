@@ -1,5 +1,6 @@
 import { compatible, portKind, registry } from "../modules/registry";
 import { defaultParams, type ParamValues } from "../modules/types";
+import { COMMENT_SIZE, commentFrame } from "../modules/comment";
 import type { CableEdge, ModuleNode } from "./graph";
 
 const KEY = "knotty:patch:v1";
@@ -7,7 +8,7 @@ const SAVE_DELAY_MS = 300;
 
 /** Ce qui est enregistré : uniquement l'état durable, sans sélection, mesures ni animations. */
 interface SavedPatch {
-    nodes: { id: string; type: string; x: number; y: number; params: ParamValues }[];
+    nodes: { id: string; type: string; x: number; y: number; params: ParamValues; text?: string; w?: number; h?: number }[];
     edges: { source: string; sourceHandle: string; target: string; targetHandle: string }[];
 }
 
@@ -35,7 +36,14 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
             const params = Object.fromEntries(
                 Object.entries(defaults).map(([id, value]) => [id, Number.isFinite(n.params?.[id]) ? n.params[id] : value]),
             );
-            return { id: n.id, type: "module", position: { x: n.x, y: n.y }, data: { type: n.type, params } };
+            const node: ModuleNode = { id: n.id, type: "module", position: { x: n.x, y: n.y }, data: { type: n.type, params } };
+            if (n.type !== "comment") return node;
+            const size = (v: unknown, fallback: number) => (Number.isFinite(v) && (v as number) >= 80 ? (v as number) : fallback);
+            return {
+                ...node,
+                data: { ...node.data, text: typeof n.text === "string" ? n.text : "" },
+                ...commentFrame(size(n.w, COMMENT_SIZE.width), size(n.h, COMMENT_SIZE.height)),
+            };
         });
 
     const typeOf = new Map(nodes.map((n) => [n.id, n.data.type]));
@@ -77,6 +85,11 @@ export function savePatch(nodes: ModuleNode[], edges: CableEdge[]) {
                 x: Math.round(n.position.x),
                 y: Math.round(n.position.y),
                 params: n.data.params,
+                ...(n.data.type === "comment" && {
+                    text: n.data.text ?? "",
+                    w: Math.round(n.width ?? n.measured?.width ?? COMMENT_SIZE.width),
+                    h: Math.round(n.height ?? n.measured?.height ?? COMMENT_SIZE.height),
+                }),
             })),
             edges: edges
                 .filter((e) => !e.data?.dropping && ids.has(e.source) && ids.has(e.target))

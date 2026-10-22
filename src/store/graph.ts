@@ -12,12 +12,15 @@ import {
 } from "@xyflow/react";
 import { compatible, portKind, registry } from "../modules/registry";
 import { loadPatch, savePatch } from "./persist";
+import { COMMENT_SIZE, commentFrame } from "../modules/comment";
 import { examplePatch } from "./example";
 import { defaultParams, type ParamValues, type PortKind } from "../modules/types";
 
 export interface ModuleData extends Record<string, unknown> {
     type: string;
     params: ParamValues;
+    /** Texte d'un Commentaire. */
+    text?: string;
     /** Bloc en train de tomber après suppression. */
     removing?: boolean;
 }
@@ -74,6 +77,7 @@ interface GraphState {
     isValidConnection(connection: Connection | CableEdge): boolean;
     addModule(type: string, position: XYPosition): void;
     setParam(nodeId: string, paramId: string, value: number): void;
+    setText(nodeId: string, text: string): void;
     removeNode(nodeId: string): void;
     /** Supprime tous les blocs, en cascade. */
     clearAll(): void;
@@ -89,6 +93,7 @@ const makeNode = (type: string, position: XYPosition, id = newId(type), params: 
     type: "module",
     position,
     data: { type, params: { ...defaultParams(registry[type]), ...params } },
+    ...(type === "comment" && commentFrame(COMMENT_SIZE.width, COMMENT_SIZE.height)),
 });
 
 /** Taille supposée d'un nouveau bloc tant qu'il n'est pas mesuré. */
@@ -103,6 +108,8 @@ const MARGIN = 56;
 const freeSpot = (nodes: ModuleNode[], wanted: XYPosition): XYPosition => {
     const overlaps = (p: XYPosition) =>
         nodes.some((n) => {
+            // On peut poser un bloc dans un cadre de Commentaire.
+            if (n.data.type === "comment") return false;
             const w = n.measured?.width ?? NEW_BLOCK.width;
             const h = n.measured?.height ?? NEW_BLOCK.height;
             return (
@@ -207,7 +214,9 @@ export const useGraph = create<GraphState>((set, get) => ({
 
     addModule: (type, position) => {
         const nodes = get().nodes;
-        set({ nodes: [...nodes, makeNode(type, freeSpot(nodes, position))] });
+        // Un Commentaire se pose où on le lâche, même par-dessus des blocs (il passe derrière).
+        const at = type === "comment" ? position : freeSpot(nodes, position);
+        set({ nodes: [...nodes, makeNode(type, at)] });
     },
 
     setParam: (nodeId, paramId, value) =>
@@ -216,6 +225,9 @@ export const useGraph = create<GraphState>((set, get) => ({
                 n.id === nodeId ? { ...n, data: { ...n.data, params: { ...n.data.params, [paramId]: value } } } : n,
             ),
         }),
+
+    setText: (nodeId, text) =>
+        set({ nodes: get().nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)) }),
 
     loadExample(id) {
         // Le moteur audio fait la différence : les anciens blocs sont détruits, les nouveaux créés.

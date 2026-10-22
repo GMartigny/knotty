@@ -1096,3 +1096,87 @@ button {
     stroke-width: 1.5px;
     stroke-dasharray: 3 3;
 }
+
+/* ——— Commentaire : cadre de texte redimensionnable, derrière les blocs ——— */
+
+.comment {
+    width: 100%;
+    height: 100%;
+    border: 3px dashed rgba(255, 246, 229, 0.45);
+    border-radius: 24px;
+    background: rgba(255, 246, 229, 0.06);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.comment:hover,
+.comment.is-selected {
+    border-color: rgba(255, 246, 229, 0.8);
+    background: rgba(255, 246, 229, 0.1);
+}
+
+.comment.is-removing {
+    pointer-events: none;
+    animation: block-fall 0.7s cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+}
+
+.comment-head {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 10px 0 16px;
+    color: var(--cream);
+}
+
+.comment-icon {
+    font-size: 26px;
+    line-height: 40px;
+    opacity: 0.7;
+}
+
+.comment-text {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    field-sizing: content;
+    border: none;
+    border-radius: 8px;
+    padding: 2px 6px;
+    background: transparent;
+    color: var(--cream);
+    font: 600 28px/1.3 "Fredoka", system-ui, sans-serif;
+    cursor: text;
+}
+
+.comment-text::placeholder {
+    color: rgba(255, 246, 229, 0.45);
+}
+
+.comment-text:focus {
+    outline: none;
+    background: rgba(26, 27, 58, 0.35);
+}
+
+.comment:hover .block-remove {
+    opacity: 1;
+}
+
+/* Poignées de redimensionnement : discrètes, visibles au survol ou à la sélection. */
+.react-flow__resize-control.comment-line {
+    border-color: transparent;
+}
+
+.react-flow__resize-control.comment-handle {
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    background: var(--cream);
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.react-flow__node:hover .comment-handle,
+.comment.is-selected .comment-handle {
+    opacity: 1;
+}

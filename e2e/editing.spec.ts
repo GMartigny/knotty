@@ -245,6 +245,14 @@ test("a key held on the keyboard holds the note, released it fades", async ({ pa
     await expect.poll(level, { timeout: 3000 }).toBeLessThan(0.2);
 });
 
+test("an oscillator sounds at the frequency of its slider", async ({ page }) => {
+    const osc = await add(page, "Oscillator");
+    // 220 Hz by default: about 220 rising zero crossings per second in the wave it plays.
+    const measured = () => node(page, osc).locator(".mini-scope").evaluate((c) => Number((c as HTMLElement).dataset.measuredHz));
+    await expect.poll(measured, { timeout: 3000 }).toBeGreaterThan(205);
+    expect(await measured()).toBeLessThan(235);
+});
+
 test("the patch is saved and restored on reload", async ({ page }) => {
     await add(page, "Noise");
     await add(page, "Output");

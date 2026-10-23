@@ -127,6 +127,10 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
                     break;
                 }
             }
+            // Frequency actually heard, counted from the wave's rising zero crossings (shown to tests).
+            let crossings = 0;
+            for (let i = 1; i < len; i++) if (samples[i - 1] < 0 && samples[i] >= 0) crossings++;
+            el.dataset.measuredHz = ((crossings * engine.sampleRate) / len).toFixed(0);
             const step = Math.max(1, Math.floor(span / 160));
             const points: number[] = [];
             for (let i = start; i <= start + span; i += step) points.push(samples[i] * gain);

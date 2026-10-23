@@ -28,6 +28,8 @@ export const sine: ModuleDef = {
         const source = new Tone.Oscillator({ type: SHAPES[values.shape] ?? "sine", volume: SOURCE_DB });
         // The frequency (slider + modulation) is summed on a bus, so other blocks can follow it live.
         const frequencyBus = new Tone.Gain(1).connect(source.frequency);
+        // A Gain connected to a Tone signal adds to its own value (440 Hz by default): only the bus counts.
+        source.frequency.value = 0;
         const frequency = driven(frequencyBus, paramDef(params, "frequency"), values.frequency);
         let glide = values.glide ?? 0;
         // Samples for the mini-wave shown in the block.

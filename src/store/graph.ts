@@ -89,6 +89,10 @@ interface GraphState {
     undo(): void;
     /** Redoes the last undone change (Ctrl+Shift+Z, Ctrl+Y). */
     redo(): void;
+    /** Copies the selected blocks: their settings and texts, not their cables. Returns how many. */
+    copy(): number;
+    /** Pastes the copied blocks, their top-left corner at `at` (otherwise next to the originals), selected. */
+    paste(at?: XYPosition): void;
 }
 
 /** The same nodes, with one block's settings changed. */
@@ -173,6 +177,9 @@ export const useGraph = create<GraphState>((set, get) => {
     let last = { key: "", at: 0 };
     /** A block is being dragged or a Comment resized: the whole gesture is one undo step. */
     let gesture = false;
+    /** Blocks copied with Ctrl+C, and how many times they were pasted without a position. */
+    let clipboard: ModuleNode[] = [];
+    let pastes = 0;
     /** Falls still to come from a "clear everything" cascade, cancelled by undo/redo. */
     let pendingFalls: { id: string; timer: ReturnType<typeof setTimeout> }[] = [];
 
@@ -373,6 +380,36 @@ export const useGraph = create<GraphState>((set, get) => {
 
         undo: () => restore(past, future),
         redo: () => restore(future, past),
+
+        copy() {
+            const selected = get().nodes.filter((n) => n.selected && !n.data.removing);
+            if (!selected.length) return 0;
+            clipboard = selected.map((n) => structuredClone({ ...n, selected: false }));
+            pastes = 0;
+            return selected.length;
+        },
+
+        paste(at) {
+            if (!clipboard.length) return;
+            const left = Math.min(...clipboard.map((n) => n.position.x));
+            const top = Math.min(...clipboard.map((n) => n.position.y));
+            // At the pointer, or a little further down each time, so copies don't hide the originals.
+            const step = 40 * ++pastes;
+            const dx = at ? at.x - left : step;
+            const dy = at ? at.y - top : step;
+            const copies = clipboard.map((n) => ({
+                ...createNode(n.data.type, { x: n.position.x + dx, y: n.position.y + dy }, {
+                    params: { ...n.data.params },
+                    text: n.data.text,
+                    size: n.width && n.height ? { width: n.width, height: n.height } : undefined,
+                }),
+                selected: true,
+            }));
+            record();
+            // The copies end up selected, alone; shared settings (the tempo) follow the mat.
+            const others = get().nodes.map((n) => (n.selected ? { ...n, selected: false } : n));
+            set({ nodes: alignShared([...others, ...copies]) });
+        },
 
         clearAll() {
             // Blocks fall one after the other, from left to right.

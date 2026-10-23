@@ -6,6 +6,7 @@ import {
     ReactFlowProvider,
     useReactFlow,
     type ConnectionLineComponentProps,
+    type XYPosition,
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
 import { useGraph } from "./store/graph";
@@ -20,21 +21,29 @@ import { isTextField } from "./lib/dom";
 const nodeTypes = { module: ModuleBlock };
 const edgeTypes = { cable: CableEdge };
 
-/** Ctrl+Z undoes the last change to the patch; Ctrl+Shift+Z (or Ctrl+Y) redoes it. Cmd on a Mac. */
-function useUndoKeys() {
+/**
+ * Keyboard shortcuts on the patch (Cmd on a Mac): Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes,
+ * Ctrl+C copies the selected blocks, Ctrl+V pastes them at the pointer (`pointer()`, in flow coordinates).
+ */
+function usePatchShortcuts(pointer: () => XYPosition | undefined) {
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            // In a text field, its own undo applies, not the patch's.
+            // In a text field, its own undo and copy apply, not the patch's.
             if (!(e.ctrlKey || e.metaKey) || e.altKey || isTextField(e.target)) return;
+            const graph = useGraph.getState();
             const key = e.key.toLowerCase();
-            if (key === "z" && !e.shiftKey) useGraph.getState().undo();
-            else if ((key === "z" && e.shiftKey) || key === "y") useGraph.getState().redo();
+            if (key === "z" && !e.shiftKey) graph.undo();
+            else if ((key === "z" && e.shiftKey) || key === "y") graph.redo();
+            else if (key === "c" && !e.shiftKey) {
+                // Nothing selected: leave the browser's own copy alone (selected text…).
+                if (!graph.copy()) return;
+            } else if (key === "v" && !e.shiftKey) graph.paste(pointer());
             else return;
             e.preventDefault();
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, []);
+    }, [pointer]);
 }
 
 /** Cable "in hand" while pulling: a slightly sagging curve. */
@@ -56,9 +65,14 @@ function Workbench() {
     const grabbing = grab?.kind ? `${grab.side === "source" ? "out" : "in"}-${grab.kind}` : undefined;
     const { screenToFlowPosition } = useReactFlow();
     const [started, setStarted] = useState(engine.isRunning);
-    useUndoKeys();
-
     const mat = useRef<HTMLElement>(null);
+    // Last pointer position over the mat, where Ctrl+V pastes.
+    const lastPointer = useRef<{ x: number; y: number } | null>(null);
+    const pointer = useCallback(
+        () => (lastPointer.current ? screenToFlowPosition(lastPointer.current) : undefined),
+        [screenToFlowPosition],
+    );
+    usePatchShortcuts(pointer);
 
     const addAtCenter = useCallback(
         (type: string) => {
@@ -85,7 +99,13 @@ function Workbench() {
     return (
         <div className="app">
             <Palette onAdd={addAtCenter} onDrop={onDrop} />
-            <main ref={mat} className="mat" data-grab={grabbing}>
+            <main
+                ref={mat}
+                className="mat"
+                data-grab={grabbing}
+                onPointerMove={(e) => (lastPointer.current = { x: e.clientX, y: e.clientY })}
+                onPointerLeave={() => (lastPointer.current = null)}
+            >
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}

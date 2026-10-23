@@ -25,6 +25,8 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 **Undo**: `graph.ts` keeps a history of patch snapshots (`undo`/`redo`, up to 100 steps). Every action that changes the patch calls `record()` *before* changing it; slider drags, text typing, row resizing and block drags are merged into one step (a `key` or a gesture flag). Fall animations only remove blocks and cables that are still falling, so an undo during a fall wins.
 
+**Copy / paste**: `copy()` keeps a deep copy of the selected nodes in the store (not the system clipboard), without cables; `paste(at?)` creates them with new ids at the pointer, or offset by 40 px per paste, selected, as one undo step. Shortcuts live in `App.tsx` (`usePatchShortcuts`) and leave text fields alone.
+
 **Comment**: a `comment` node with no sound or sockets, rendered by `CommentBlock` behind blocks and cables (`zIndex: -1`, `elevateNodesOnSelect={false}`), resizable with `NodeResizer`. It only moves by its grip (`dragHandle`), and the frame itself lets the pointer through to the mat and the blocks.
 
 ## Checking

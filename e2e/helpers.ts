@@ -44,10 +44,10 @@ export const nodeCount = (page: Page) => page.locator(".react-flow__node").count
 export const cableCount = (page: Page) => page.locator(".react-flow__edge").count();
 export const node = (page: Page, id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
 
-/** Highest glow (output level, 0…1) of a block over a short while. */
-export async function peakLevel(page: Page, id: string, ms = 2500) {
+/** Highest glow (output level, 0…1) of a block over a short while, or as soon as it reaches `enough`. */
+export async function peakLevel(page: Page, id: string, enough = 1, ms = 2500) {
     let peak = 0;
-    for (let t = 0; t < ms; t += 50) {
+    for (let t = 0; t < ms && peak < enough; t += 50) {
         const level = await node(page, id)
             .locator(".block")
             .evaluate((b) => parseFloat(getComputedStyle(b).getPropertyValue("--level")) || 0);

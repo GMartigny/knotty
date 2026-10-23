@@ -51,7 +51,7 @@ for (const { name, tracks } of PRESETS) {
         await loadPreset(page, name);
         expect(await page.evaluate(overlaps)).toEqual([]);
         expect(await page.evaluate(badlyFramed)).toEqual([]);
-        for (const id of tracks) expect(await peakLevel(page, id), id).toBeGreaterThan(0.3);
+        for (const id of tracks) expect(await peakLevel(page, id, 0.3), id).toBeGreaterThanOrEqual(0.3);
         expect(errors).toEqual([]);
     });
 }

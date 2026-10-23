@@ -254,3 +254,83 @@ describe("undo / redo", () => {
         expect(ids()).toHaveLength(5);
     });
 });
+
+describe("copy / paste", () => {
+    const select = (...which: string[]) =>
+        state().onNodesChange(state().nodes.map((n) => ({ type: "select" as const, id: n.id, selected: which.includes(n.id) })));
+    const copies = () => state().nodes.filter((n) => !["seq", "osc", "env", "flt", "lfo"].includes(n.id));
+
+    it("copies the selected blocks with their settings, but not their cables", () => {
+        state().setParam("osc", "frequency", 330);
+        select("osc", "env");
+        expect(state().copy()).toBe(2);
+        state().paste();
+        expect(copies().map((n) => n.data.type)).toEqual(["sine", "envelope"]);
+        expect(copies()[0].data.params.frequency).toBe(330);
+        expect(state().edges).toHaveLength(2);
+        expect(copies().every((n) => !state().edges.some((e) => e.source === n.id || e.target === n.id))).toBe(true);
+    });
+
+    it("gives the copies new ids, selects them alone, and offsets each paste", () => {
+        select("flt");
+        state().copy();
+        state().paste();
+        state().paste();
+        const [a, b] = copies();
+        expect(a.id).not.toBe(b.id);
+        expect(a.position).toEqual({ x: 1040, y: 40 });
+        expect(b.position).toEqual({ x: 1080, y: 80 });
+        expect(state().nodes.filter((n) => n.selected).map((n) => n.id)).toEqual([b.id]);
+    });
+
+    it("pastes at the pointer, keeping the blocks' layout", () => {
+        select("osc", "env");
+        state().copy();
+        state().paste({ x: 0, y: 2000 });
+        expect(copies().map((n) => n.position)).toEqual([
+            { x: 0, y: 2000 },
+            { x: 300, y: 2000 },
+        ]);
+    });
+
+    it("keeps the copy as it was when copied", () => {
+        select("flt");
+        state().copy();
+        state().setParam("flt", "Q", 15);
+        state().paste();
+        expect(copies()[0].data.params.Q).toBe(4);
+    });
+
+    it("copies a Comment's text and size", () => {
+        state().addModule("comment", { x: 0, y: 900 });
+        const id = state().nodes.at(-1)!.id;
+        state().setText(id, "Drums");
+        select(id);
+        state().copy();
+        state().paste();
+        expect(state().nodes.at(-1)).toMatchObject({ data: { type: "comment", text: "Drums" }, width: 380, height: 240 });
+    });
+
+    it("keeps the tempo shared", () => {
+        select("seq");
+        state().copy();
+        state().setParam("seq", "bpm", 150);
+        state().paste();
+        expect(state().nodes.at(-1)!.data.params.bpm).toBe(150);
+    });
+
+    it("undoes a paste in one step", () => {
+        select("osc", "env");
+        state().copy();
+        state().paste();
+        state().undo();
+        expect(ids()).toEqual(["seq", "osc", "env", "flt", "lfo"]);
+    });
+
+    it("does nothing without a selection or a copy", () => {
+        select();
+        expect(state().copy()).toBe(0);
+        state().paste();
+        expect(ids()).toHaveLength(5);
+    });
+});

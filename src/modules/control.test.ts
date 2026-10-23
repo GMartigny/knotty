@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pickNote } from "./scale";
 import { levelOf } from "./random";
-import { MODE, isStepOn, rowFrequency, toggleStep } from "./sequencer";
+import { MODE, glideFrom, isStepOn, rowFrequency, toggleStep } from "./sequencer";
 import { acceptsBlock, portKind, registry } from "./registry";
 import { defaultParams } from "./types";
 import { frequencyOf, midiOf, noteName } from "./notes";
@@ -89,6 +89,15 @@ describe("Sequencer notes mode", () => {
         expect(acceptsBlock("sequencer", "model", "noise")).toBe(false);
         // Other inputs take anything compatible.
         expect(acceptsBlock("filter", "in", "noise")).toBe(true);
+    });
+
+    it("glides each note from the closest note of the previous step", () => {
+        expect(glideFrom([], 1)).toBeUndefined();
+        expect(glideFrom([1.5], 1)).toBe(1.5);
+        // Closest in pitch (ratio), not in hertz.
+        expect(glideFrom([0.5, 2.1], 1)).toBe(0.5);
+        expect(glideFrom([0.5, 1.9], 1)).toBe(1.9);
+        expect(glideFrom([1, 1.25, 1.5], 1.3)).toBe(1.25);
     });
 
     it("gets an octave of rows when switched to notes", () => {

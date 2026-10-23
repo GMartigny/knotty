@@ -12,7 +12,7 @@ export const SEQ_STEPS = 16;
 export const MODE = { tracks: 0, notes: 1 } as const;
 
 /** Notes mode, nothing plugged in: a sine on C4, and a short, soft envelope. */
-export const DEFAULT_VOICE = { shape: 0, frequency: frequencyOf(midiC(4)) };
+export const DEFAULT_VOICE = { shape: 0, frequency: frequencyOf(midiC(4)), glide: 0 };
 export const DEFAULT_SHAPE = { attack: 0.01, decay: 0.2, sustain: 0.5, hold: 0.15, release: 0.4 };
 
 /** Starting patterns, one integer per row: bit i turns step i on. */
@@ -37,6 +37,13 @@ export const toggleStep = (pattern: number, step: number) => pattern ^ (1 << ste
  */
 export const rowFrequency = (base: number, rows: number, row: number) => base * Math.pow(2, (rows - 1 - row) / 12);
 
+/**
+ * Notes mode, with the Oscillator's Glide: where a new note slides from, the closest note of the
+ * previous step that had notes (as intervals from the bottom row), or nowhere if there was none.
+ */
+export const glideFrom = (previous: number[], interval: number) =>
+    previous.length ? previous.reduce((a, b) => (Math.abs(Math.log(b / interval)) < Math.abs(Math.log(a / interval)) ? b : a)) : undefined;
+
 const tracks = { param: "mode", value: MODE.tracks };
 const notes = { param: "mode", value: MODE.notes };
 
@@ -54,8 +61,9 @@ const rowParams: ParamDef[] = Array.from({ length: SEQ_MAX_ROWS }, (_, row) => (
  * Sequencer, two modes:
  * - Tracks: each row is a track with its own trigger output, a hit on every lit step (drums…);
  * - Notes: a piano roll that plays itself. An Envelope plugged in as a model gives the shape of the notes,
- *   and the Oscillator plugged into that Envelope gives their sound: its shape, and its frequency (slider
- *   and modulation, live) for the bottom row; each row above is a semitone higher.
+ *   and the Oscillator plugged into that Envelope gives their sound: its shape, its frequency (slider
+ *   and modulation, live) for the bottom row, each row above a semitone higher, and its Glide (each note
+ *   slides from the closest note of the previous step).
  *   Its sound comes out mixed, and row by row.
  */
 export const sequencer: ModuleDef = {
@@ -147,13 +155,17 @@ export const sequencer: ModuleDef = {
             if (frequency) frequency.chain(v.ratio, v.osc.frequency);
         };
 
+        /** Notes of the last step that played some (intervals from the bottom row), for the glide. */
+        let previousNotes: number[] = [];
         const playNotes = (time: number, step: number) => {
             const oscillator = model?.input("in");
             const sine = oscillator?.type === "sine" ? oscillator : undefined;
             const sound = { ...DEFAULT_VOICE, ...sine?.params() };
             const shape = { ...DEFAULT_SHAPE, ...model?.params() };
             const live = sine?.tap("frequency");
+            const glide = sound.glide ?? 0;
             const rows = values.rows ?? SEQ_ROWS;
+            const played: number[] = [];
             for (let row = 0; row < rows; row++) {
                 if (!isStepOn(values[rowParam(row)] ?? 0, step)) continue;
                 const v = voiceOf(row);
@@ -161,14 +173,24 @@ export const sequencer: ModuleDef = {
                 osc.type = SHAPES[sound.shape] ?? "sine";
                 follow(v, live);
                 const interval = rowFrequency(1, rows, row);
-                if (live) v.ratio.factor.setValueAtTime(interval, time);
-                else osc.frequency.setValueAtTime(rowFrequency(sound.frequency, rows, row), time);
+                played.push(interval);
+                // Following the Oscillator, a voice sets its interval; otherwise its own frequency.
+                const pitch = live ? v.ratio.factor : osc.frequency;
+                const scale = live ? 1 : sound.frequency;
+                // With a Glide, the note slides from the closest note of the previous step.
+                const from = glide > 0 ? glideFrom(previousNotes, interval) : undefined;
+                pitch.cancelScheduledValues(time);
+                if (from !== undefined && from !== interval) {
+                    pitch.setValueAtTime(from * scale, time);
+                    pitch.exponentialRampToValueAtTime(interval * scale, time + glide);
+                } else pitch.setValueAtTime(interval * scale, time);
                 env.attack = shape.attack;
                 env.decay = shape.decay;
                 env.sustain = shape.sustain;
                 env.release = shape.release;
                 env.triggerAttackRelease(shape.attack + shape.decay + shape.hold, time);
             }
+            if (played.length) previousNotes = played;
         };
 
         // Subscribe to the shared clock: the step comes from the transport position,

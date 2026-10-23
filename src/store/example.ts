@@ -24,7 +24,7 @@ const cable = (source: string, sourceHandle: string, target: string, targetHandl
  *     rolled on each hit moves the filter a little, so no two hits sound quite the same
  *  4. Bass — sawtooth, envelope, low-pass swept by a slow oscillator
  *  5. Melody — a triangle around 800 Hz whose pitch is swayed by a slow sine
- *     (attenuated by a Volume), so each note lands on a different pitch
+ *     (turned down by a one-channel Mixer), so each note lands on a different pitch
  * A 5-channel mixer, a light reverb and the output.
  */
 function groovePatch(): Patch {
@@ -65,9 +65,9 @@ function groovePatch(): Patch {
         node("hat-env", "envelope", colEnv, row(2), { ...shortHit, decay: 0.03, release: 0.02 }),
         node("hat-filter", "filter", colFilter, row(2) + 60, { mode: 1, frequency: 7000, Q: 0.8 }),
         // A die rolled on every hi-hat hit nudges its filter: some hits brighter, some duller.
-        node("hat-dice", "random", 0, row(2) + 160, { values: 6 }),
-        // Depth: −12 dB ≈ ±25% around 7 kHz.
-        node("hat-dice-depth", "volume", 250, row(2) + 160, { volume: -12 }),
+        node("hat-dice", "random", 0, row(2) + 210, { values: 6 }),
+        // Depth: a one-channel Mixer at 25% ≈ ±25% around 7 kHz.
+        node("hat-dice-depth", "mixer", 250, row(2) + 210, { channels: 1, level1: 25 }),
 
         // 4. Bass swept by a slow oscillator
         node("bass-osc", "sine", colSource, row(3) + 20, { shape: 3, frequency: 55 }),
@@ -78,8 +78,8 @@ function groovePatch(): Patch {
         // Melody, on row 5 of the sequencer
         node("mel-osc", "sine", colSource, MEL_Y, { shape: 2, frequency: 800 }),
         node("mel-lfo", "sine", -160, MEL_Y, { shape: 0, frequency: 0.37 }),
-        // Sway depth: −14 dB ≈ ±20% around 800 Hz.
-        node("mel-depth", "volume", 160, MEL_Y + 20, { volume: -14 }),
+        // Sway depth: a one-channel Mixer at 20% ≈ ±20% around 800 Hz.
+        node("mel-depth", "mixer", 160, MEL_Y + 20, { channels: 1, level1: 20 }),
         node("mel-env", "envelope", colEnv, MEL_Y - 20, { attack: 0.005, decay: 0.16, sustain: 0.25, hold: 0.06, release: 0.28 }),
 
         // Mix and output
@@ -107,7 +107,7 @@ function groovePatch(): Patch {
         cable("hat-env", "out", "hat-filter", "in"),
         cable("hat-filter", "out", "mix", "in3"),
         cable("seq", "row2", "hat-dice", "gate", "trigger"),
-        cable("hat-dice", "out", "hat-dice-depth", "in"),
+        cable("hat-dice", "out", "hat-dice-depth", "in1"),
         cable("hat-dice-depth", "out", "hat-filter", "mod:frequency"),
 
         cable("bass-osc", "out", "bass-env", "in"),
@@ -116,7 +116,7 @@ function groovePatch(): Patch {
         cable("lfo", "out", "bass-filter", "mod:frequency"),
 
         cable("seq", "row4", "mel-env", "gate", "trigger"),
-        cable("mel-lfo", "out", "mel-depth", "in"),
+        cable("mel-lfo", "out", "mel-depth", "in1"),
         cable("mel-depth", "out", "mel-osc", "mod:frequency"),
         cable("mel-osc", "out", "mel-env", "in"),
         cable("mel-env", "out", "mix", "in5"),
@@ -243,8 +243,8 @@ function metalPatch(): Patch {
         // Very short glide: slurs the notes without the "siren" effect.
         node("lead-osc", "sine", cSrc, SOLO_Y, { shape: 3, frequency: 330, glide: 0.015 }),
         node("vibrato", "sine", cSeq - 340, SOLO_Y + 410, { shape: 0, frequency: 6 }),
-        // Vibrato depth: −40 dB ≈ ±1%, just enough to bring held notes to life.
-        node("vibrato-depth", "volume", cSeq, SOLO_Y + 430, { volume: -40 }),
+        // Vibrato depth: a one-channel Mixer at 1% ≈ ±1%, just enough to bring held notes to life.
+        node("vibrato-depth", "mixer", cSeq, SOLO_Y + 430, { channels: 1, level1: 1 }),
         node("lead-env", "envelope", cEnv, SOLO_Y - 40, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
         node("lead-dist", "distortion", cFx1, SOLO_Y + 20, { drive: 45, wet: 1 }),
         node("lead-echo", "echo", cFx2, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
@@ -304,7 +304,7 @@ function metalPatch(): Patch {
         cable("band", "row1", "lead-scale", "gate", "trigger"),
         cable("lead-scale", "out", "lead-osc", "note", "trigger"),
         cable("lead-scale", "out", "lead-env", "gate", "trigger"),
-        cable("vibrato", "out", "vibrato-depth", "in"),
+        cable("vibrato", "out", "vibrato-depth", "in1"),
         cable("vibrato-depth", "out", "lead-osc", "mod:frequency"),
         cable("lead-osc", "out", "lead-env", "in"),
         cable("lead-env", "out", "lead-dist", "in"),

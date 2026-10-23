@@ -6,7 +6,6 @@ import { output } from "./output";
 import { sequencer } from "./sequencer";
 import { sine } from "./sine";
 import { envelope } from "./envelope";
-import { volume } from "./volume";
 import { mixer } from "./mixer";
 import { keyboard } from "./keyboard";
 import { echo } from "./echo";
@@ -17,7 +16,7 @@ import { random } from "./random";
 import { transpose } from "./transpose";
 
 /** Adding a module = importing it here. */
-const modules: ModuleDef[] = [sequencer, keyboard, scale, transpose, random, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output, comment];
+const modules: ModuleDef[] = [sequencer, keyboard, scale, transpose, random, sine, noise, envelope, mixer, filter, echo, distortion, reverb, output, comment];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
 

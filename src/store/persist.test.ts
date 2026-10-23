@@ -49,6 +49,25 @@ describe("loading a saved patch", () => {
         expect(edges.map((e) => e.id)).toEqual(["s1:row0->e1:gate"]);
     });
 
+    it("turns a Volume (removed) into a one-channel Mixer at the same level", () => {
+        store({
+            nodes: [
+                { id: "n", type: "noise", x: 0, y: 0, params: {} },
+                { id: "v", type: "volume", x: 0, y: 0, params: { volume: -12, mute: 0 } },
+                { id: "m", type: "volume", x: 0, y: 0, params: { volume: 6, mute: 1 } },
+                { id: "o", type: "output", x: 0, y: 0, params: {} },
+            ],
+            edges: [
+                { source: "n", sourceHandle: "out", target: "v", targetHandle: "in" },
+                { source: "v", sourceHandle: "out", target: "o", targetHandle: "in" },
+            ],
+        });
+        const { nodes, edges } = loadPatch()!;
+        expect(nodes[1].data).toMatchObject({ type: "mixer", params: { channels: 1, level1: 25 } });
+        expect(nodes[2].data.params.level1).toBe(0);
+        expect(edges.map((e) => e.id)).toEqual(["n:out->v:in1", "v:out->o:in"]);
+    });
+
     it("drops cables on rows that are hidden", () => {
         store({
             nodes: [

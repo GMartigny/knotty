@@ -30,6 +30,7 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
         return null;
     }
 
+    migrate(saved);
     const nodes = alignShared(
         saved.nodes
             .filter((n) => registry[n.type])
@@ -65,6 +66,23 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
     }
 
     return { nodes, edges: [...edges.values()] };
+}
+
+/**
+ * Blocks that no longer exist, turned into their replacement:
+ * a Volume (removed) becomes a one-channel Mixer at the same level, its input on channel 1.
+ */
+function migrate(saved: SavedPatch) {
+    const volumes = new Set<string>();
+    for (const n of saved.nodes) {
+        if (n.type !== "volume") continue;
+        volumes.add(n.id);
+        const db = Number.isFinite(n.params?.volume) ? n.params.volume : 0;
+        const level = n.params?.mute === 1 ? 0 : Math.round(Math.pow(10, db / 20) * 100);
+        n.type = "mixer";
+        n.params = { channels: 1, level1: Math.min(100, Math.max(0, level)) };
+    }
+    for (const e of saved.edges) if (volumes.has(e.target) && e.targetHandle === "in") e.targetHandle = "in1";
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;

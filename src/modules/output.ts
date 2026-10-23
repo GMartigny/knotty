@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 import type { ModuleDef } from "./types";
 
-/** Sends the sound to the speakers. The level is set upstream with a Volume block. */
+/** Sends the sound to the speakers. The level is set upstream with a Mixer. */
 export const output: ModuleDef = {
     type: "output",
     label: "Output",

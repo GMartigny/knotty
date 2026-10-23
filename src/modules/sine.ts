@@ -24,7 +24,7 @@ export const sine: ModuleDef = {
     outputs: [{ id: "out", kind: "audio" }],
     params,
     create(values) {
-        // Fixed level: loudness is set with a Volume block.
+        // Fixed level: loudness is set with a Mixer (one channel is enough).
         const source = new Tone.Oscillator({ type: SHAPES[values.shape] ?? "sine", volume: SOURCE_DB });
         // The frequency (slider + modulation) is summed on a bus, so other blocks can follow it live.
         const frequencyBus = new Tone.Gain(1).connect(source.frequency);

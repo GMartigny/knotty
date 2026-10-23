@@ -34,25 +34,28 @@ export const keyboard: ModuleDef = {
         /** Pressed keys, as a bitmask (for display). */
         let held = 0;
 
-        const play = (semitone: number) => {
+        /** A key pressed or released: the note lasts as long as it is held. */
+        const play = (semitone: number, down: boolean) => {
+            const bit = 1 << semitone;
+            if (down === Boolean(held & bit)) return;
+            held = down ? held | bit : held & ~bit;
             const time = Tone.now();
             const note = noteFrequency(octave, semitone);
-            for (const fn of listeners) fn(time, note);
+            for (const fn of listeners) fn(time, note, down ? "on" : "off");
         };
 
         const down = (e: KeyboardEvent) => {
             const i = KEY_CODES.indexOf(e.code);
             if (i < 0 || ignored(e)) return;
             e.preventDefault();
-            if (e.repeat) return;
-            held |= 1 << i;
-            play(i);
+            if (!e.repeat) play(i, true);
         };
         const up = (e: KeyboardEvent) => {
             const i = KEY_CODES.indexOf(e.code);
-            if (i >= 0) held &= ~(1 << i);
+            if (i >= 0) play(i, false);
         };
-        const blur = () => (held = 0);
+        // The window loses focus with keys still down: release them all.
+        const blur = () => KEY_CODES.forEach((_, i) => play(i, false));
         window.addEventListener("keydown", down);
         window.addEventListener("keyup", up);
         window.addEventListener("blur", blur);

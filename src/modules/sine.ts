@@ -34,8 +34,9 @@ export const sine: ModuleDef = {
         return {
             scope: () => waveform.getValue(),
             pitch: () => frequency.value,
-            trigger: (_port, time, note) => {
-                if (note) frequency.jump(note, time, glide);
+            trigger: (_port, time, note, gate) => {
+                // A released key doesn't change the pitch: the note keeps sounding through its release.
+                if (note && gate !== "off") frequency.jump(note, time, glide);
             },
             input: () => undefined,
             output: () => source,

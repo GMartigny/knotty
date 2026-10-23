@@ -17,7 +17,12 @@ export interface PortDef {
 }
 
 /** Trigger at audio time `time`, optionally with a note (frequency in Hz). */
-export type TriggerListener = (time: number, note?: number) => void;
+/**
+ * How a trigger is played. Without a gate, it's a hit of a set length (a sequencer step);
+ * "on" and "off" are a key pressed then released, and the note lasts as long as the key is held.
+ */
+export type Gate = "on" | "off";
+export type TriggerListener = (time: number, note?: number, gate?: Gate) => void;
 
 export interface ParamDef {
     id: string;
@@ -111,8 +116,8 @@ export interface ModuleInstance {
     start?(): void;
     /** Trigger output: subscribe to triggers. Returns the unsubscribe function. */
     listen?(portId: string, fn: TriggerListener): () => void;
-    /** Trigger input: receives a trigger at audio time `time`, with the played note if any. */
-    trigger?(portId: string, time: number, note?: number): void;
+    /** Trigger input: receives a trigger at audio time `time`, with the played note and the gate if any. */
+    trigger?(portId: string, time: number, note?: number, gate?: Gate): void;
     /** Trigger input: tells whether at least one cable is plugged in. */
     setTriggerConnected?(portId: string, connected: boolean): void;
     /** Displayable state (e.g. current sequencer step), read by the UI. */
@@ -121,8 +126,8 @@ export interface ModuleInstance {
     scope?(): Float32Array;
     /** Frequency currently playing (it may come from a note rather than the slider). */
     pitch?(): number;
-    /** Action played from the UI (e.g. a mini-piano key). */
-    play?(value: number): void;
+    /** Action played from the UI: a mini-piano key pressed (`down`) or released. */
+    play?(value: number, down: boolean): void;
     /** Real-time modulation of a setting, if that setting is an audio parameter. */
     modTarget?(paramId: string): ModTarget | undefined;
     /** Otherwise, modulation read on demand: the engine provides a function returning the signal (-1…1). */

@@ -55,6 +55,8 @@ export const scale: ModuleDef = {
         input.connect(meter);
         const listeners = new Set<TriggerListener>();
         let last = -1;
+        /** Last note picked (audio side), sent again when the key that picked it is released. */
+        let held = -1;
 
         const pick = () => pickNote((meter.getValue() as number) / SOURCE_LEVEL, v.scale, v.root, v.octave);
 
@@ -64,10 +66,16 @@ export const scale: ModuleDef = {
             setParam(id, value) {
                 v[id] = value;
             },
-            trigger: (_port, time) => {
+            trigger: (_port, time, _note, gate) => {
+                // A key released: pass it on with the note being held, without picking a new one.
+                if (gate === "off") {
+                    if (held >= 0) for (const fn of listeners) fn(time, frequencyOf(held), "off");
+                    return;
+                }
                 const midi = pick();
+                held = midi;
                 Tone.getDraw().schedule(() => (last = midi), time);
-                for (const fn of listeners) fn(time, frequencyOf(midi));
+                for (const fn of listeners) fn(time, frequencyOf(midi), gate);
             },
             listen(_port, fn) {
                 listeners.add(fn);

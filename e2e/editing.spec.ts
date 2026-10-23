@@ -160,6 +160,25 @@ test("the keyboard plays notes into an oscillator", async ({ page }) => {
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "261.6");
 });
 
+test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {
+    const keys = await add(page, "Keyboard");
+    const osc = await add(page, "Oscillator");
+    const env = await add(page, "Envelope");
+    await plug(page, socket(keys, "out"), socket(env, "gate"));
+    await plug(page, socket(osc, "out"), socket(env, "in"));
+    const level = () =>
+        node(page, env)
+            .locator(".block")
+            .evaluate((b) => parseFloat(getComputedStyle(b).getPropertyValue("--level")) || 0);
+    await page.locator(".mat").click({ position: { x: 5, y: 5 } });
+    await page.keyboard.down("KeyA");
+    // Well past attack + decay + hold: a one-shot note would be over by now.
+    await page.waitForTimeout(1500);
+    expect(await level()).toBeGreaterThan(0.4);
+    await page.keyboard.up("KeyA");
+    await expect.poll(level, { timeout: 3000 }).toBeLessThan(0.2);
+});
+
 test("the patch is saved and restored on reload", async ({ page }) => {
     await add(page, "Noise");
     await add(page, "Output");

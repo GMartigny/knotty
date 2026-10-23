@@ -22,6 +22,12 @@ export function MiniPiano({ nodeId }: { nodeId: string }) {
     // Keys held on the computer keyboard, as a bitmask.
     const held = Math.max(0, usePosition(nodeId));
     const [clicked, setClicked] = useState(-1);
+    // A click holds the note until the button is released or the pointer leaves the key.
+    const release = (i: number) => {
+        if (clicked !== i) return;
+        setClicked(-1);
+        engine.play(nodeId, i, false);
+    };
 
     const whites = KEY_CODES.map((_, i) => i).filter((i) => !BLACK.has(i));
     const key = (i: number) => (
@@ -33,10 +39,10 @@ export function MiniPiano({ nodeId }: { nodeId: string }) {
             onPointerDown={(e) => {
                 e.stopPropagation();
                 setClicked(i);
-                engine.play(nodeId, i);
+                engine.play(nodeId, i, true);
             }}
-            onPointerUp={() => setClicked(-1)}
-            onPointerLeave={() => setClicked(-1)}
+            onPointerUp={() => release(i)}
+            onPointerLeave={() => release(i)}
         >
             <span>{labels[i]}</span>
         </button>

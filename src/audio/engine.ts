@@ -87,9 +87,9 @@ class AudioEngine {
         return this.modules.get(nodeId)?.instance.scope?.();
     }
 
-    /** Action played from the UI (e.g. a clicked key); no effect until sound is started. */
-    play(nodeId: string, value: number) {
-        if (this.running) this.modules.get(nodeId)?.instance.play?.(value);
+    /** Action played from the UI (e.g. a key pressed or released); no effect until sound is started. */
+    play(nodeId: string, value: number, down = true) {
+        if (this.running) this.modules.get(nodeId)?.instance.play?.(value, down);
     }
 
     /** Frequency played by a module, if known. */
@@ -170,9 +170,10 @@ class AudioEngine {
 
         if (edge.data?.kind === "trigger") {
             if (!src.listen || !dst.trigger) return;
-            const unsubscribe = src.listen(outPort, (time, note) => {
-                dst.trigger!(inPort, time, note);
-                Tone.getDraw().schedule(() => this.pulses.set(edge.id, performance.now()), time);
+            const unsubscribe = src.listen(outPort, (time, note, gate) => {
+                dst.trigger!(inPort, time, note, gate);
+                // The cable flashes when a note starts, not when a key is released.
+                if (gate !== "off") Tone.getDraw().schedule(() => this.pulses.set(edge.id, performance.now()), time);
             });
             const key = `${edge.target}:${inPort}`;
             const count = (this.triggerInputs.get(key) ?? 0) + 1;

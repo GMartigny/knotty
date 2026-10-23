@@ -36,7 +36,9 @@ export const random: ModuleDef = {
                 signal.rampTo(levelOf(index, count), 0.02);
                 if (shown >= 0) shown = rolls * 100 + index;
             },
-            trigger: (_port, time) => {
+            trigger: (_port, time, _note, gate) => {
+                // Rolls when a step or a key starts, not when a key is released.
+                if (gate === "off") return;
                 index = Math.floor(Math.random() * count);
                 signal.setValueAtTime(levelOf(index, count), time);
                 const face = index;

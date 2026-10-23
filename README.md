@@ -10,7 +10,7 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 - **Plug in**: pull a cable from one socket to another. While pulling, only compatible sockets light up.
 - **Unplug**: pull from a socket that is already plugged in and let go in empty space; the cable falls.
 - **Socket colors**: orange = sound, yellow = trigger (sequencer, keyboard), sky-blue ring = a setting that a sound can move.
-- **Make sound**: sources (Oscillator, Noise) play continuously; an Envelope triggered by the Sequencer or the Keyboard cuts them into notes. Everything ends up in the Output.
+- **Make sound**: sources (Oscillator, Noise) play continuously; an Envelope triggered by the Sequencer or the Keyboard cuts them into notes (a key held on the Keyboard holds the note). Everything ends up in the Output.
 - **Modulate**: plug a slow Oscillator into a setting's socket (a filter's frequency, another oscillator's…) to make it move on its own.
 - **Add chance**: the Random block rolls a die on each trigger and holds the value. Plug it into a Scale for random in-tune melodies, or into a setting to vary every note. "Values" sets how many faces the die has; for smooth drifts, use a slow Oscillator instead.
 - **More rows**: drag the grip on the bottom edge of a Sequencer or Mixer to add or remove rows (up to 16).

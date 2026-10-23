@@ -13,7 +13,7 @@ export function TransposeDisplay({ nodeId }: { nodeId: string }) {
                     {noteName(notes.in)} <span aria-hidden>→</span> {noteName(notes.out)}
                 </span>
             ) : (
-                <span className="note-idle">waiting for a note</span>
+                <span className="note-idle">notes or sound</span>
             )}
         </div>
     );

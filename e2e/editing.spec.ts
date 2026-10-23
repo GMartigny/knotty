@@ -187,8 +187,8 @@ test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ pag
     const keys = await add(page, "Keyboard");
     const shift = await add(page, "Transpose");
     const osc = await add(page, "Oscillator");
-    await plug(page, socket(keys, "out"), socket(shift, "in"));
-    await plug(page, socket(shift, "out"), socket(osc, "note"));
+    await plug(page, socket(keys, "out"), `${socket(shift, "notes")}.target`);
+    await plug(page, `${socket(shift, "notes")}.source`, socket(osc, "note"));
     // −24…+24 semitones on the slider: +7 is at 31/48.
     await node(page, shift).locator("input.slider").fill("0.646");
     await expect(node(page, shift).locator(".param output")).toHaveText("7 st");
@@ -197,6 +197,17 @@ test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ pag
     await page.keyboard.up("KeyA");
     await expect(node(page, shift).locator(".note-display")).toHaveText("C4 → G4");
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0");
+});
+
+test("Transpose also moves any sound: a noise goes through it to the output", async ({ page }) => {
+    const noise = await add(page, "Noise");
+    const shift = await add(page, "Transpose");
+    const out = await add(page, "Output");
+    await plug(page, socket(noise, "out"), `${socket(shift, "in")}.target`);
+    await plug(page, `${socket(shift, "out")}.source`, socket(out, "in"));
+    await node(page, shift).locator("input.slider").fill("0.75");
+    await expect(node(page, shift).locator(".param output")).toHaveText("12 st");
+    expect(await peakLevel(page, shift, 0.3)).toBeGreaterThanOrEqual(0.3);
 });
 
 test("the sequencer in notes mode plays the notes itself, sounding like the Envelope and Oscillator it copies", async ({ page }) => {

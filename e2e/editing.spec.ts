@@ -176,6 +176,28 @@ test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ pag
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0");
 });
 
+test("the sequencer in notes mode plays a melody: one note per voice, from the lowest", async ({ page }) => {
+    const seq = await add(page, "Sequencer");
+    const low = await add(page, "Oscillator");
+    const high = await add(page, "Oscillator");
+    const block = node(page, seq);
+    await block.getByRole("radio", { name: "Notes" }).click({ force: true });
+    // An octave of rows, named from C5 down to C4, and voice outputs instead of track outputs.
+    await expect(block.locator("[data-row]")).toHaveCount(13);
+    await expect(block.locator(".seq-row-label").first()).toHaveText("C5");
+    await expect(block.locator(".seq-row-label").last()).toHaveText("C4");
+    await expect(block.locator('[data-handleid="row0"]')).toHaveCount(0);
+    await plug(page, socket(seq, "voice1"), socket(low, "note"));
+    await plug(page, socket(seq, "voice2"), socket(high, "note"));
+    // Light G4 and C5 on every step of the first beat: a two-note chord.
+    for (const label of ["C5", "G4"]) {
+        const row = block.locator(".seq-row", { has: page.locator(".seq-row-label", { hasText: new RegExp(`^${label}$`) }) });
+        for (let step = 0; step < 4; step++) await row.locator(".seq-step").nth(step).click({ force: true });
+    }
+    await expect(node(page, low).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0", { timeout: 5000 });
+    await expect(node(page, high).locator(".mini-scope")).toHaveAttribute("data-hz", "523.3", { timeout: 5000 });
+});
+
 test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {
     const keys = await add(page, "Keyboard");
     const osc = await add(page, "Oscillator");

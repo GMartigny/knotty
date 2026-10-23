@@ -230,6 +230,19 @@ export const useGraph = create<GraphState>((set, get) => {
         setTimeout(() => set({ edges: get().edges.filter((e) => !(ids.has(e.id) && e.data?.dropping)) }), DROP_MS);
     };
 
+    /** Cables plugged into a socket that just disappeared (a removed row, another mode) come loose on this block's side. */
+    const unplugHidden = (nodeId: string) => {
+        const node = get().nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+        const { type, params } = node.data;
+        for (const e of get().edges.filter(isLive)) {
+            if (e.source === nodeId && !portKind(type, e.sourceHandle ?? "out", "out", params))
+                unplug({ nodeId, handleId: e.sourceHandle ?? "out", side: "source" });
+            if (e.target === nodeId && !portKind(type, e.targetHandle ?? "in", "in", params))
+                unplug({ nodeId, handleId: e.targetHandle ?? "in", side: "target" });
+        }
+    };
+
     /** A block falls and fades out; its cables come loose on its side and fall too. */
     const drop = (nodeId: string) => {
         const node = get().nodes.find((n) => n.id === nodeId);
@@ -348,6 +361,10 @@ export const useGraph = create<GraphState>((set, get) => {
             // A shared setting (the tempo) changes on every block of the same type.
             const targets = def?.shared ? get().nodes.filter((n) => n.data.type === node.data.type) : [node];
             set({ nodes: targets.reduce((nodes, t) => withParams(nodes, t.id, { [paramId]: value }), get().nodes) });
+            // Some settings bring others along (a sequencer switched to notes gets an octave of rows).
+            const adjust = registry[node.data.type]?.adjust;
+            if (adjust) set({ nodes: withParams(get().nodes, nodeId, adjust(get().nodes.find((n) => n.id === nodeId)!.data.params, paramId)) });
+            unplugHidden(nodeId);
         },
 
         setRows(nodeId, rows) {
@@ -359,14 +376,7 @@ export const useGraph = create<GraphState>((set, get) => {
             // Dragging the grip over several rows is a single undo step.
             record(`${nodeId}:rows`);
             set({ nodes: withParams(get().nodes, nodeId, { [def.rows.param]: count }) });
-            // Cables plugged into a row that just disappeared come loose on this block's side.
-            const params = get().nodes.find((n) => n.id === nodeId)!.data.params;
-            for (const e of get().edges.filter(isLive)) {
-                if (e.source === nodeId && !portKind(def.type, e.sourceHandle ?? "out", "out", params))
-                    unplug({ nodeId, handleId: e.sourceHandle ?? "out", side: "source" });
-                if (e.target === nodeId && !portKind(def.type, e.targetHandle ?? "in", "in", params))
-                    unplug({ nodeId, handleId: e.targetHandle ?? "in", side: "target" });
-            }
+            unplugHidden(nodeId);
         },
 
         setText(nodeId, text) {

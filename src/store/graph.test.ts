@@ -151,6 +151,19 @@ describe("settings", () => {
         expect(live()).toEqual(["seq:row0->env:gate", "osc:out->env:in"]);
     });
 
+    it("switching the sequencer to notes unplugs its track outputs and gives it an octave of rows", () => {
+        state().setParam("seq", "mode", 1);
+        expect(param("seq", "rows")).toBe(13);
+        expect(live()).toEqual(["osc:out->env:in"]);
+        expect(state().isValidConnection(link("seq", "voice1", "osc", "note"))).toBe(true);
+        expect(state().isValidConnection(link("seq", "row0", "env", "gate"))).toBe(false);
+        // One undo brings back the mode, the rows and the cable.
+        state().undo();
+        expect(param("seq", "mode")).toBe(0);
+        expect(param("seq", "rows")).toBe(4);
+        expect(live()).toHaveLength(2);
+    });
+
     it("ignore blocks without rows", () => {
         state().setRows("flt", 3);
         expect(state().nodes.find((n) => n.id === "flt")!.data.params.rows).toBeUndefined();

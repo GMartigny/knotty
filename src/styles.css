@@ -429,6 +429,22 @@ button {
     text-align: center;
 }
 
+/* Notes mode: rows named after their note; sharps on a darker band, like a piano's black keys. */
+.seq.is-notes {
+    gap: 3px;
+}
+
+.seq.is-notes .seq-row-label {
+    width: 30px;
+    font-size: 0.7rem;
+    text-align: right;
+}
+
+.seq.is-notes .seq-row.is-sharp {
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    border-radius: 6px;
+}
+
 .seq-steps {
     display: flex;
     gap: 8px;

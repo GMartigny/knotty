@@ -14,6 +14,8 @@ export interface PortDef {
     inline?: boolean;
     /** Row this socket belongs to, on a block with a variable number of rows (see `ModuleDef.rows`). */
     row?: number;
+    /** Only shown (and pluggable) when another setting has this value, e.g. a sequencer mode. */
+    when?: Condition;
 }
 
 /** Trigger at audio time `time`, optionally with a note (frequency in Hz). */
@@ -44,6 +46,8 @@ export interface ParamDef {
     inputPort?: string;
     /** Row this setting belongs to, on a block with a variable number of rows (see `ModuleDef.rows`). */
     row?: number;
+    /** Only shown (and pluggable) when another setting has this value, e.g. a sequencer mode. */
+    when?: Condition;
     /** Show only the slider and its value, without the label (still read by screen readers). */
     bare?: boolean;
     /** The same value on every block of this type (e.g. the sequencers' tempo, which is global). */
@@ -53,6 +57,12 @@ export interface ParamDef {
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";
 
 export type ParamValues = Record<string, number>;
+
+/** A setting's value that makes a socket or another setting appear. */
+export interface Condition {
+    param: string;
+    value: number;
+}
 
 /** Output level of sources (−12 dB). Modulation from a source at this level sweeps the whole range. */
 export const SOURCE_DB = -12;
@@ -150,6 +160,8 @@ export interface ModuleDef {
      * Sockets and settings tagged with a `row` beyond that count are hidden and can't be plugged.
      */
     rows?: { param: string; min: number; max: number };
+    /** Settings to change along with `changed` (e.g. switching a sequencer to notes gives it an octave of rows). */
+    adjust?(params: ParamValues, changed: string): ParamValues;
     create(params: ParamValues): ModuleInstance;
 }
 
@@ -157,9 +169,13 @@ export interface ModuleDef {
 export const rowCount = (def: ModuleDef, params: ParamValues) =>
     def.rows ? (params[def.rows.param] ?? def.params.find((p) => p.id === def.rows!.param)?.default ?? def.rows.max) : Infinity;
 
-/** Is this socket or setting part of a visible row? */
-export const isActive = (def: ModuleDef, params: ParamValues, item: { row?: number }) =>
-    item.row === undefined || item.row < rowCount(def, params);
+/** A setting's value, or its default. */
+const valueOf = (def: ModuleDef, params: ParamValues, id: string) => params[id] ?? def.params.find((p) => p.id === id)?.default;
+
+/** Is this socket or setting shown: on a visible row, and its condition met? */
+export const isActive = (def: ModuleDef, params: ParamValues, item: { row?: number; when?: Condition }) =>
+    (item.row === undefined || item.row < rowCount(def, params)) &&
+    (item.when === undefined || valueOf(def, params, item.when.param) === item.when.value);
 
 export const defaultParams = (def: ModuleDef): ParamValues =>
     Object.fromEntries(def.params.map((p) => [p.id, p.default]));

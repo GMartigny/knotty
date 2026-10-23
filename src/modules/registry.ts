@@ -33,12 +33,12 @@ export const categoryColor: Record<ModuleCategory, string> = {
 
 /**
  * Signal kind of a block's socket, or `undefined` if it doesn't exist.
- * With `params`, a socket on a hidden row (see `ModuleDef.rows`) doesn't exist either.
+ * With `params`, a hidden socket (on a hidden row, or whose `when` isn't met) doesn't exist either.
  */
 export const portKind = (type: string, portId: string, side: "in" | "out", params?: ParamValues): PortKind | undefined => {
     const def = registry[type];
     if (!def) return undefined;
-    const active = (item: { row?: number }) => !params || isActive(def, params, item);
+    const active = (item: Parameters<typeof isActive>[2]) => !params || isActive(def, params, item);
     if (side === "in") {
         const paramId = modParamOf(portId);
         if (paramId) {

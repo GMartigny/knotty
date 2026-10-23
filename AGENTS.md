@@ -21,6 +21,8 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 **Modulation**: every continuous slider has a `mod:<setting>` socket. The signal is added to the slider position: ±half the range, or ±100% of the value on a log scale, for a source at its normal level (`SOURCE_LEVEL`). Audio parameters are modulated in real time (`modTarget`, via `DrivenParam` in `src/modules/mod.ts`, because Tone.js resets a parameter to zero as soon as a signal is connected to it); Envelope times are read on each trigger (`setModSource`). A setting marked `modulatable: false` has no socket.
 
+**Sequencer modes**: Tracks (one output per row, hits without notes) or Notes (piano roll: row 0 is the top note, a C, then a semitone lower per row; a step sends its lit notes from the lowest, one per `voiceN` output, `stepNotes`). Sockets and settings tagged with `when` only exist in one mode; switching mode unplugs the other mode's cables and `adjust` gives Notes an octave of rows.
+
 **Variable rows**: a `ModuleDef` with `rows` (Sequencer, Mixer) stores its row count in a hidden setting, changed by dragging `RowResizer` on the block's bottom edge. Sockets and settings tagged with a `row` beyond that count are hidden, and `portKind(…, params)` treats them as missing; `setRows` unplugs the cables on removed rows.
 
 **Undo**: `graph.ts` keeps a history of patch snapshots (`undo`/`redo`, up to 100 steps). Every action that changes the patch calls `record()` *before* changing it; slider drags, text typing, row resizing and block drags are merged into one step (a `key` or a gesture flag). Fall animations only remove blocks and cables that are still falling, so an undo during a fall wins.

@@ -90,6 +90,9 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
     const plugged = new Set(pluggedInputs.split(","));
 
     if (!def) return null;
+    // Sockets of hidden rows or of another mode aren't shown.
+    const inputs = def.inputs.filter((p) => isActive(def, data.params, p));
+    const outputs = def.outputs.filter((p) => isActive(def, data.params, p));
     // A block without settings (e.g. Output) shrinks to its header.
     const compact = !def.params.some((p) => !p.hidden);
 
@@ -133,7 +136,7 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
 
             {!compact && (
                 <div className="block-body">
-                    <InputRows ports={def.inputs} />
+                    <InputRows ports={inputs} />
                     {def.idleHint && !plugged.has(def.idleHint.port) && <p className="idle-hint">{def.idleHint.text}</p>}
                     {DISPLAYS[def.type]?.(id, data.params)}
                     {def.params
@@ -155,8 +158,8 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
             )}
 
             {def.rows && <RowResizer nodeId={id} min={def.rows.min} max={def.rows.max} rows={rowCount(def, data.params)} />}
-            {compact && <EdgeSockets ports={def.inputs} side="in" />}
-            <EdgeSockets ports={def.outputs} side="out" />
+            {compact && <EdgeSockets ports={inputs} side="in" />}
+            <EdgeSockets ports={outputs} side="out" />
         </div>
     );
 }

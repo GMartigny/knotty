@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadPatch, readPatch, savePatch, toCompact } from "./persist";
+import { KEYS, loadPatch, readPatch, savePatch, toCompact } from "./persist";
+import { registry } from "../modules/registry";
 import { EXAMPLES, examplePatch } from "./example";
 import { createCable, createNode } from "./nodes";
 
 const KEY = "knotty:patch:v2";
 const store = (value: unknown) => localStorage.setItem(KEY, typeof value === "string" ? value : JSON.stringify(value));
+
+/** Settings by their one-letter key, as in a compact patch. */
+const keyed = (type: string, params: Record<string, unknown>) =>
+    Object.fromEntries(Object.entries(params).map(([id, v]) => [KEYS[registry[type].params.findIndex((p) => p.id === id)] ?? id, v]));
 
 beforeEach(() => localStorage.clear());
 afterEach(() => vi.useRealTimers());
@@ -24,9 +29,9 @@ describe("loading a saved patch", () => {
         store({
             v: 2,
             n: [
-                ["sequencer", 0, 0, { bpm: 999, rows: 40, row0: 5, ghost: 3 }],
-                ["sequencer", 0, 400, { bpm: 90 }],
-                ["envelope", 500, 0, { attack: "fast" }],
+                ["sequencer", 0, 0, keyed("sequencer", { bpm: 999, rows: 40, row0: 5, "~": 3 })],
+                ["sequencer", 0, 400, keyed("sequencer", { bpm: 90 })],
+                ["envelope", 500, 0, keyed("envelope", { attack: "fast" })],
                 ["theremin", 0, 0],
                 ["comment", 0, 0, null, "Drums", 20, 300],
             ],
@@ -44,7 +49,7 @@ describe("loading a saved patch", () => {
         const [s1, s2, e1, c] = nodes;
         // Clamped to the range, unknown settings dropped, defaults filled in.
         expect(s1.data.params).toMatchObject({ bpm: 200, rows: 16, row0: 5 });
-        expect(s1.data.params.ghost).toBeUndefined();
+        expect(s1.data.params["~"]).toBeUndefined();
         expect(e1.data.params.attack).toBe(0.01);
         // The tempo is shared.
         expect(s2.data.params.bpm).toBe(200);
@@ -55,7 +60,7 @@ describe("loading a saved patch", () => {
     });
 
     it("drops cables on rows that are hidden", () => {
-        store({ v: 2, n: [["sequencer", 0, 0, { rows: 2 }], ["envelope", 0, 0]], e: [[0, "row3", 1, "gate"]] });
+        store({ v: 2, n: [["sequencer", 0, 0, keyed("sequencer", { rows: 2 })], ["envelope", 0, 0]], e: [[0, "row3", 1, "gate"]] });
         expect(loadPatch()!.edges).toEqual([]);
     });
 });
@@ -79,7 +84,7 @@ describe("saving", () => {
         expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
             v: 2,
             n: [
-                ["sequencer", 1, 3, { bpm: 90 }],
+                ["sequencer", 1, 3, keyed("sequencer", { bpm: 90 })],
                 ["envelope", 0, 0],
                 ["comment", 0, 0, null, "Hi", 380, 240],
             ],
@@ -107,6 +112,10 @@ describe("saving", () => {
             const verbose = { nodes: nodes.map((n) => ({ id: n.id, type: n.data.type, ...n.position, params: n.data.params })), edges };
             expect(JSON.stringify(compact).length * 2).toBeLessThan(JSON.stringify(verbose).length);
         }
+    });
+
+    it("has a one-letter key for every setting of every block type", () => {
+        for (const def of Object.values(registry)) expect(def.params.length).toBeLessThanOrEqual(KEYS.length);
     });
 
     it("ignores what isn't a patch", () => {

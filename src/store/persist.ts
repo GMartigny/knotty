@@ -1,5 +1,5 @@
 import { acceptsBlock, compatible, portKind, registry } from "../modules/registry";
-import { defaultParams, type ParamValues } from "../modules/types";
+import type { ParamValues } from "../modules/types";
 import { COMMENT_SIZE } from "../modules/comment";
 import type { CableEdge, ModuleNode } from "./graph";
 import { alignShared, createCable, createNode, newId } from "./nodes";
@@ -15,7 +15,13 @@ interface SavedPatch {
     edges: { source: string; sourceHandle: string; target: string; targetHandle: string }[];
 }
 
-/** A block, compact: type, position, settings that differ from the defaults, and a Comment's text and size. */
+/**
+ * A setting's one-letter key in a compact patch: its rank in the block type's settings
+ * (so reordering a type's settings changes what older patches mean).
+ */
+export const KEYS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+/** A block, compact: type, position, settings that differ from the defaults (by key), and a Comment's text and size. */
 type CompactNode = [type: string, x: number, y: number, params?: ParamValues | null, text?: string | null, w?: number, h?: number];
 
 /**
@@ -36,8 +42,11 @@ export function toCompact(nodes: ModuleNode[], edges: CableEdge[]): CompactPatch
         v: 2,
         n: live.map((n) => {
             const { type } = n.data;
-            const defaults = registry[type] ? defaultParams(registry[type]) : {};
-            const changed = Object.entries(n.data.params).filter(([id, v]) => v !== defaults[id]);
+            const defs = registry[type]?.params ?? [];
+            const changed = defs.flatMap((p, i) => {
+                const v = n.data.params[p.id];
+                return v !== undefined && v !== p.default ? [[KEYS[i], v]] : [];
+            });
             const node: CompactNode = [type, Math.round(n.position.x), Math.round(n.position.y), changed.length ? Object.fromEntries(changed) : null];
             if (type === "comment")
                 node.push(
@@ -66,7 +75,10 @@ function expand(data: unknown): SavedPatch | null {
             type: String(type),
             x: Number(x) || 0,
             y: Number(y) || 0,
-            params: params ?? {},
+            // Keys back to setting ids.
+            params: Object.fromEntries(
+                (registry[String(type)]?.params ?? []).flatMap((p, k) => (params?.[KEYS[k]] !== undefined ? [[p.id, params[KEYS[k]]]] : [])),
+            ),
             ...(text != null && { text, w, h }),
         })),
         edges: d.e

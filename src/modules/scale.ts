@@ -35,6 +35,7 @@ export function pickNote(m: number, scaleIndex: number, rootIndex: number, octav
 export const scale: ModuleDef = {
     type: "scale",
     label: "Scale",
+    description: "Turns a signal into in-tune notes: on each trigger, the signal's level picks a note of the scale.",
     icon: "♯",
     category: "sequencer",
     inputs: [

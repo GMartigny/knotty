@@ -62,6 +62,7 @@ const rowParams: ParamDef[] = Array.from({ length: SEQ_MAX_ROWS }, (_, row) => (
 export const sequencer: ModuleDef = {
     type: "sequencer",
     label: "Sequencer",
+    description: "Plays its steps in a loop, in time. Tracks mode: one trigger output per row, for drums. Notes mode: a piano roll, each row a note, for melodies and chords.",
     icon: "▦",
     category: "sequencer",
     inputs: [],

@@ -150,6 +150,8 @@ export interface ModuleDef {
     /** Hint shown in the block while nothing is plugged into this input. */
     idleHint?: { port: string; text: string };
     label: string;
+    /** What the block does, in a sentence or two: shown when hovering it in the palette. */
+    description: string;
     icon: string;
     category: ModuleCategory;
     inputs: PortDef[];

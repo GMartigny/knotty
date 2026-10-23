@@ -6,6 +6,7 @@ import { DrivenParam } from "./mod";
 export const volume: ModuleDef = {
     type: "volume",
     label: "Volume",
+    description: "Sets the level of a sound. Modulated, it makes a tremolo.",
     icon: "◖",
     category: "effect",
     inputs: [{ id: "in", kind: "audio", label: "Input" }],

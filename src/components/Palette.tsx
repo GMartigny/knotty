@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { categoryColor, moduleList, registry } from "../modules/registry";
 
+/** How long the pointer rests on a block before its description shows, in ms. */
+const TIP_DELAY_MS = 450;
+
 /** Distance (px) beyond which a press becomes a drag rather than a click. */
 const DRAG_THRESHOLD = 5;
 
@@ -60,6 +63,21 @@ export function Palette({ onAdd, onDrop }: Props) {
 
     const ghost = drag?.moved ? registry[drag.type] : undefined;
 
+    // Description of the block under the pointer (or focused), next to the palette.
+    const [tip, setTip] = useState<{ type: string; top: number; left: number } | null>(null);
+    const tipTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+    const showTip = (type: string, el: HTMLElement, delay: number) => {
+        clearTimeout(tipTimer.current);
+        const r = el.getBoundingClientRect();
+        tipTimer.current = setTimeout(() => setTip({ type, top: r.top + r.height / 2, left: r.right + 14 }), delay);
+    };
+    const hideTip = () => {
+        clearTimeout(tipTimer.current);
+        setTip(null);
+    };
+    useEffect(() => () => clearTimeout(tipTimer.current), []);
+    const tipDef = tip && !drag ? registry[tip.type] : undefined;
+
     return (
         <aside className="palette" aria-label="Blocks">
             <h1 className="logo">knotty</h1>
@@ -71,7 +89,13 @@ export function Palette({ onAdd, onDrop }: Props) {
                             type="button"
                             className={`palette-item ${drag?.moved && drag.type === m.type ? "is-dragging" : ""}`}
                             style={{ "--accent": categoryColor[m.category] } as React.CSSProperties}
+                            aria-describedby={tip?.type === m.type ? "palette-tip" : undefined}
+                            onPointerEnter={(e) => showTip(m.type, e.currentTarget, TIP_DELAY_MS)}
+                            onPointerLeave={hideTip}
+                            onFocus={(e) => showTip(m.type, e.currentTarget, 0)}
+                            onBlur={hideTip}
                             onPointerDown={(e) => {
+                                hideTip();
                                 if (e.button !== 0) return;
                                 e.preventDefault();
                                 start.current = { x: e.clientX, y: e.clientY };
@@ -118,6 +142,18 @@ export function Palette({ onAdd, onDrop }: Props) {
                     <dd>takes a sound to move the slider</dd>
                 </div>
             </dl>
+
+            {tipDef && tip && (
+                <div
+                    id="palette-tip"
+                    role="tooltip"
+                    className="palette-tip"
+                    style={{ top: tip.top, left: tip.left, "--accent": categoryColor[tipDef.category] } as React.CSSProperties}
+                >
+                    <strong>{tipDef.label}</strong>
+                    {tipDef.description}
+                </div>
+            )}
 
             {/* The block follows the pointer while dragging. */}
             {ghost && drag && (

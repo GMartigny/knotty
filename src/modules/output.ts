@@ -5,6 +5,7 @@ import type { ModuleDef } from "./types";
 export const output: ModuleDef = {
     type: "output",
     label: "Output",
+    description: "Sends the sound to your speakers, through a safety limiter.",
     icon: "◉",
     category: "output",
     inputs: [{ id: "in", kind: "audio" }],

@@ -19,6 +19,7 @@ export const unpackNotes = (packed: number) => ({ in: Math.floor(packed / 1000),
 export const transpose: ModuleDef = {
     type: "transpose",
     label: "Transpose",
+    description: "Moves the notes going through by some semitones: octaves, harmonies, chords.",
     icon: "⇅",
     category: "sequencer",
     inputs: [{ id: "in", kind: "trigger", label: "Notes" }],

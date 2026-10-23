@@ -23,6 +23,7 @@ const ignored = (e: KeyboardEvent) => e.ctrlKey || e.metaKey || e.altKey || isTe
 export const keyboard: ModuleDef = {
     type: "keyboard",
     label: "Keyboard",
+    description: "Play notes with your computer keyboard (A to K) or the mini-piano. A held key holds the note.",
     icon: "♪",
     category: "sequencer",
     inputs: [],

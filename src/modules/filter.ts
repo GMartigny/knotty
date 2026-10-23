@@ -13,6 +13,7 @@ const params: ParamDef[] = [
 export const filter: ModuleDef = {
     type: "filter",
     label: "Filter",
+    description: "Keeps the low, the high or the middle frequencies. Its resonance makes it sing.",
     icon: "◠",
     category: "effect",
     inputs: [{ id: "in", kind: "audio", label: "Input" }],

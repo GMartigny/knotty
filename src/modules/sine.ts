@@ -16,6 +16,7 @@ const params: ParamDef[] = [
 export const sine: ModuleDef = {
     type: "sine",
     label: "Oscillator",
+    description: "A continuous tone: sine, square, triangle or saw. Very slow, it moves other settings (vibrato, sweeps).",
     icon: "∿",
     category: "source",
     // A received note (e.g. from a Keyboard) sets the frequency until the next one.

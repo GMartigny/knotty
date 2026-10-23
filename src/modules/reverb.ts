@@ -11,6 +11,7 @@ const params: ParamDef[] = [
 export const reverb: ModuleDef = {
     type: "reverb",
     label: "Reverb",
+    description: "Puts the sound in a room, from a small one to a cathedral.",
     icon: "◎",
     category: "effect",
     inputs: [{ id: "in", kind: "audio", label: "Input" }],

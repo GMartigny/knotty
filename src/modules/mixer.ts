@@ -27,6 +27,7 @@ const levels: ParamDef[] = Array.from({ length: MIXER_MAX_CHANNELS }, (_, i) => 
 export const mixer: ModuleDef = {
     type: "mixer",
     label: "Mixer",
+    description: "Mixes up to 16 sounds into one, each with its own level.",
     icon: "≡",
     category: "effect",
     // Sockets placed on each channel's row, next to its slider.

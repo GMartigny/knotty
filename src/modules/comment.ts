@@ -16,6 +16,7 @@ export const commentFrame = (width: number, height: number) => ({ width, height,
 export const comment: ModuleDef = {
     type: "comment",
     label: "Comment",
+    description: "A resizable frame with some text, behind the blocks, to name the parts of a patch.",
     icon: "✎",
     category: "note",
     inputs: [],

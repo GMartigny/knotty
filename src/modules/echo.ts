@@ -16,6 +16,7 @@ const params: ParamDef[] = [
 export const echo: ModuleDef = {
     type: "echo",
     label: "Echo",
+    description: "Repeats the sound, fading, in time with the tempo.",
     icon: "⟫",
     category: "effect",
     inputs: [{ id: "in", kind: "audio", label: "Input" }],

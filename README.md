@@ -6,7 +6,7 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 
 ## How it works
 
-- **Add a block**: drag it from the palette onto the mat (or click it).
+- **Add a block**: drag it from the palette onto the mat (or click it). Rest the pointer on one to see what it does.
 - **Plug in**: pull a cable from one socket to another. While pulling, only compatible sockets light up.
 - **Unplug**: pull from a socket that is already plugged in and let go in empty space; the cable falls.
 - **Socket colors**: orange = sound, yellow = trigger (sequencer, keyboard), sky-blue ring = a setting that a sound can move.

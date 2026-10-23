@@ -28,6 +28,11 @@ describe("block definitions", () => {
         if (def.idleHint) expect(ins).toContain(def.idleHint.port);
     });
 
+    it.each(moduleList.map((m) => [m.type, m] as const))("%s: has a short description for the palette", (_, def) => {
+        expect(def.description.length).toBeGreaterThan(20);
+        expect(def.description.length).toBeLessThan(200);
+    });
+
     it("variable rows are stored in an existing hidden setting", () => {
         for (const def of moduleList.filter((m) => m.rows)) {
             const p = def.params.find((d) => d.id === def.rows!.param);

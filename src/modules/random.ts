@@ -12,6 +12,7 @@ export const levelOf = (index: number, count: number) => (count > 1 ? -1 + (2 * 
 export const random: ModuleDef = {
     type: "random",
     label: "Random",
+    description: "Rolls a die on each trigger and holds the value: random melodies through a Scale, or a setting that changes on every note.",
     icon: "⚄",
     category: "sequencer",
     idleHint: { port: "gate", text: "Plug in a Trigger to roll the die." },

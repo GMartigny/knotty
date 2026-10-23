@@ -17,6 +17,7 @@ const makeup = (drive: number) => SOURCE_LEVEL / Math.tanh(SOURCE_LEVEL * drive)
 export const distortion: ModuleDef = {
     type: "distortion",
     label: "Distortion",
+    description: "Saturates the sound: warm when gentle, aggressive when pushed.",
     icon: "ϟ",
     category: "effect",
     inputs: [{ id: "in", kind: "audio", label: "Input" }],

@@ -8,6 +8,7 @@ import { ModReader, type ModuleDef } from "./types";
 export const envelope: ModuleDef = {
     type: "envelope",
     label: "Envelope",
+    description: "Cuts a sound into notes on each trigger: attack, decay, sustain and release.",
     icon: "⋀",
     category: "effect",
     idleHint: { port: "gate", text: "Plug in a Trigger to cut the sound into notes." },

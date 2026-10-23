@@ -21,6 +21,17 @@ test.beforeEach(async ({ page }) => {
     await clearMat(page);
 });
 
+test("resting on a palette block shows what it does", async ({ page }) => {
+    const item = page.locator(".palette-item", { hasText: "Filter" });
+    await item.hover();
+    const tip = page.getByRole("tooltip");
+    await expect(tip).toBeVisible();
+    await expect(tip).toContainText("Keeps the low, the high or the middle frequencies");
+    await expect(item).toHaveAttribute("aria-describedby", "palette-tip");
+    await page.mouse.move(800, 400);
+    await expect(tip).toHaveCount(0);
+});
+
 test("blocks are added from the palette by click or by drag and drop", async ({ page }) => {
     await add(page, "Noise");
     const item = await center(page, '.palette-item:has-text("Filter")');

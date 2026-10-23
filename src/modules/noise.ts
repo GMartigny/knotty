@@ -7,6 +7,7 @@ const COLORS = ["white", "pink", "brown"] as const;
 export const noise: ModuleDef = {
     type: "noise",
     label: "Noise",
+    description: "A continuous hiss, white, pink or brown. Through an Envelope and a Filter, it makes drums.",
     icon: "≈",
     category: "source",
     inputs: [],

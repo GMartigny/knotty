@@ -175,7 +175,8 @@ button {
     box-shadow:
         0 6px 0 var(--ink),
         0 0 calc(var(--level) * 36px) calc(var(--level) * 6px) var(--accent);
-    transform: scale(calc(1 + var(--level) * 0.035));
+    /* Swells with its sound; tall blocks less, so their sockets don't drift away from their cables. */
+    transform: scale(calc(1 + var(--level) * var(--swell, 0.035)));
     transition: transform 0.06s linear;
 }
 
@@ -405,6 +406,7 @@ button {
 /* ——— Sequencer ——— */
 
 .block-sequencer {
+    --swell: 0.008;
     width: auto;
 }
 

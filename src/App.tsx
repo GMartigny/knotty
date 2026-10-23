@@ -23,7 +23,8 @@ const edgeTypes = { cable: CableEdge };
 
 /**
  * Keyboard shortcuts on the patch (Cmd on a Mac): Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes,
- * Ctrl+C copies the selected blocks, Ctrl+V pastes them at the pointer (`pointer()`, in flow coordinates).
+ * Ctrl+A selects every block, Ctrl+C copies the selected blocks, Ctrl+V pastes them at the pointer
+ * (`pointer()`, in flow coordinates).
  */
 function usePatchShortcuts(pointer: () => XYPosition | undefined) {
     useEffect(() => {
@@ -34,6 +35,7 @@ function usePatchShortcuts(pointer: () => XYPosition | undefined) {
             const key = e.key.toLowerCase();
             if (key === "z" && !e.shiftKey) graph.undo();
             else if ((key === "z" && e.shiftKey) || key === "y") graph.redo();
+            else if (key === "a" && !e.shiftKey) graph.selectAll();
             else if (key === "c" && !e.shiftKey) {
                 // Nothing selected: leave the browser's own copy alone (selected text…).
                 if (!graph.copy()) return;

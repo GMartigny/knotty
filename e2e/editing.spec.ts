@@ -168,14 +168,14 @@ test("the patch is saved and restored on reload", async ({ page }) => {
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
 });
 
-test("Ctrl+C / Ctrl+V copy the selected blocks, without their cables, at the pointer", async ({ page }) => {
+test("Ctrl+A / Ctrl+C / Ctrl+V select, copy and paste blocks, without their cables, at the pointer", async ({ page }) => {
     const noise = await add(page, "Noise");
     const out = await add(page, "Output");
     await plug(page, socket(noise, "out"), socket(out, "in"));
     expect(await cableCount(page)).toBe(1);
-    // Select both blocks (Ctrl+click adds to the selection), copy, then paste elsewhere.
-    await node(page, noise).locator(".block-name").click({ force: true });
-    await node(page, out).locator(".block-name").click({ modifiers: ["Control"], force: true });
+    // Select both blocks (Ctrl+A), copy, then paste elsewhere.
+    await page.keyboard.press("Control+a");
+    await expect(page.locator(".react-flow__node.selected")).toHaveCount(2);
     await page.keyboard.press("Control+c");
     const mat = (await page.locator(".mat").boundingBox())!;
     await page.mouse.move(mat.x + 120, mat.y + mat.height - 160);

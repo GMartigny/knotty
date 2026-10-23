@@ -327,6 +327,14 @@ describe("copy / paste", () => {
         expect(ids()).toEqual(["seq", "osc", "env", "flt", "lfo"]);
     });
 
+    it("selects every block with Ctrl+A, except falling ones, without an undo step", () => {
+        state().removeNode("lfo");
+        state().selectAll();
+        expect(state().nodes.filter((n) => n.selected).map((n) => n.id)).toEqual(["seq", "osc", "env", "flt"]);
+        state().undo();
+        expect(ids()).toContain("lfo");
+    });
+
     it("does nothing without a selection or a copy", () => {
         select();
         expect(state().copy()).toBe(0);

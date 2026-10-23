@@ -89,6 +89,8 @@ interface GraphState {
     undo(): void;
     /** Redoes the last undone change (Ctrl+Shift+Z, Ctrl+Y). */
     redo(): void;
+    /** Selects every block on the mat (Ctrl+A). */
+    selectAll(): void;
     /** Copies the selected blocks: their settings and texts, not their cables. Returns how many. */
     copy(): number;
     /** Pastes the copied blocks, their top-left corner at `at` (otherwise next to the originals), selected. */
@@ -380,6 +382,10 @@ export const useGraph = create<GraphState>((set, get) => {
 
         undo: () => restore(past, future),
         redo: () => restore(future, past),
+
+        selectAll() {
+            set({ nodes: get().nodes.map((n) => (n.data.removing || n.selected ? n : { ...n, selected: true })) });
+        },
 
         copy() {
             const selected = get().nodes.filter((n) => n.selected && !n.data.removing);

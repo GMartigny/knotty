@@ -51,5 +51,11 @@ export const portKind = (type: string, portId: string, side: "in" | "out", param
     return port && active(port) ? port.kind : undefined;
 };
 
+/** A model input only takes the block types it lists. */
+export const acceptsBlock = (type: string, portId: string, sourceType: string) => {
+    const accepts = registry[type]?.inputs.find((p) => p.id === portId)?.accepts;
+    return !accepts || accepts.includes(sourceType);
+};
+
 /** Can an output plug into an input? Audio also works as a modulation signal. */
 export const compatible = (out: PortKind, into: PortKind) => out === into || (out === "audio" && into === "mod");

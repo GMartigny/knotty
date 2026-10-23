@@ -155,7 +155,11 @@ describe("settings", () => {
         state().setParam("seq", "mode", 1);
         expect(param("seq", "rows")).toBe(13);
         expect(live()).toEqual(["osc:out->env:in"]);
-        expect(state().isValidConnection(link("seq", "voice1", "osc", "note"))).toBe(true);
+        expect(state().isValidConnection(link("seq", "out", "flt", "in"))).toBe(true);
+        // Its models: an Oscillator for the sound, an Envelope for the shape of the notes.
+        expect(state().isValidConnection(link("lfo", "out", "seq", "voice"))).toBe(true);
+        expect(state().isValidConnection(link("env", "out", "seq", "shape"))).toBe(true);
+        expect(state().isValidConnection(link("flt", "out", "seq", "voice"))).toBe(false);
         expect(state().isValidConnection(link("seq", "row0", "env", "gate"))).toBe(false);
         // One undo brings back the mode, the rows and the cable.
         state().undo();

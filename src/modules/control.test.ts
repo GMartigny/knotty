@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { pickNote } from "./scale";
 import { levelOf } from "./random";
-import { MODE, SEQ_VOICES, isStepOn, rowNote, stepNotes, toggleStep } from "./sequencer";
-import { portKind, registry } from "./registry";
-import { defaultParams, isActive } from "./types";
-import { noteName } from "./notes";
+import { MODE, isStepOn, rowFrequency, toggleStep } from "./sequencer";
+import { acceptsBlock, portKind, registry } from "./registry";
+import { defaultParams } from "./types";
+import { frequencyOf, midiOf, noteName } from "./notes";
 import { SOURCE_LEVEL } from "./types";
 
 describe("Scale", () => {
@@ -58,38 +58,39 @@ describe("Sequencer patterns", () => {
 });
 
 describe("Sequencer notes mode", () => {
-    const base = { ...defaultParams(registry.sequencer), mode: MODE.notes, rows: 13, top: 2, row0: 0, row1: 0 };
+    const base = { ...defaultParams(registry.sequencer), mode: MODE.notes, rows: 13 };
 
-    it("is a piano roll: the top row is a C, each row below a semitone lower", () => {
-        expect(noteName(rowNote(base, 0))).toBe("C5");
-        expect(noteName(rowNote(base, 1))).toBe("B4");
-        expect(noteName(rowNote(base, 12))).toBe("C4");
-        expect(noteName(rowNote({ ...base, top: 0 }, 0))).toBe("C3");
+    it("is a piano roll: the bottom row plays the base, each row above a semitone higher", () => {
+        const c4 = frequencyOf(60);
+        expect(rowFrequency(c4, 13, 12)).toBeCloseTo(c4);
+        expect(noteName(midiOf(rowFrequency(c4, 13, 11)))).toBe("C♯4");
+        expect(noteName(midiOf(rowFrequency(c4, 13, 0)))).toBe("C5");
+        // The base is the model Oscillator's frequency, whatever it is.
+        expect(rowFrequency(440, 4, 3)).toBe(440);
+        expect(rowFrequency(440, 4, 0)).toBeCloseTo(440 * Math.pow(2, 3 / 12));
     });
 
-    it("plays every lit note of a step, from the lowest, up to one per voice", () => {
-        const chord = { ...base, row0: 1, row5: 1, row8: 1, row12: 1 | 2 };
-        expect(stepNotes(chord, 0).map(noteName)).toEqual(["C4", "E4", "G4", "C5"]);
-        expect(stepNotes(chord, 1).map(noteName)).toEqual(["C4"]);
-        expect(stepNotes(chord, 2)).toEqual([]);
-        const crowded = { ...base, row0: 1, row1: 1, row2: 1, row3: 1, row4: 1 };
-        expect(stepNotes(crowded, 0)).toHaveLength(SEQ_VOICES);
-        expect(noteName(stepNotes(crowded, 0)[0])).toBe("G♯4");
-    });
-
-    it("ignores rows that are hidden", () => {
-        expect(stepNotes({ ...base, rows: 2, row5: 1 }, 0)).toEqual([]);
-    });
-
-    it("shows row outputs in tracks mode, voice outputs in notes mode", () => {
+    it("has sound outputs (per row and mixed) and model inputs in notes mode, trigger outputs in tracks mode", () => {
         const tracks = defaultParams(registry.sequencer);
         expect(portKind("sequencer", "row0", "out", tracks)).toBe("trigger");
-        expect(portKind("sequencer", "voice1", "out", tracks)).toBeUndefined();
+        expect(portKind("sequencer", "note0", "out", tracks)).toBeUndefined();
+        expect(portKind("sequencer", "out", "out", tracks)).toBeUndefined();
+        expect(portKind("sequencer", "voice", "in", tracks)).toBeUndefined();
         expect(portKind("sequencer", "row0", "out", base)).toBeUndefined();
-        expect(portKind("sequencer", "voice4", "out", base)).toBe("trigger");
-        const top = registry.sequencer.params.find((p) => p.id === "top")!;
-        expect(isActive(registry.sequencer, tracks, top)).toBe(false);
-        expect(isActive(registry.sequencer, base, top)).toBe(true);
+        expect(portKind("sequencer", "note12", "out", base)).toBe("audio");
+        expect(portKind("sequencer", "note13", "out", base)).toBeUndefined();
+        expect(portKind("sequencer", "out", "out", base)).toBe("audio");
+        expect(portKind("sequencer", "voice", "in", base)).toBe("audio");
+        expect(portKind("sequencer", "shape", "in", base)).toBe("audio");
+    });
+
+    it("only takes an Oscillator as sound model and an Envelope as note shape", () => {
+        expect(acceptsBlock("sequencer", "voice", "sine")).toBe(true);
+        expect(acceptsBlock("sequencer", "voice", "noise")).toBe(false);
+        expect(acceptsBlock("sequencer", "shape", "envelope")).toBe(true);
+        expect(acceptsBlock("sequencer", "shape", "sine")).toBe(false);
+        // Other inputs take anything compatible.
+        expect(acceptsBlock("filter", "in", "noise")).toBe(true);
     });
 
     it("gets an octave of rows when switched to notes", () => {

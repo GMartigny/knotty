@@ -10,7 +10,7 @@ import {
     type NodeChange,
     type XYPosition,
 } from "@xyflow/react";
-import { compatible, portKind, registry } from "../modules/registry";
+import { acceptsBlock, compatible, portKind, registry } from "../modules/registry";
 import { loadPatch, savePatch } from "./persist";
 import { examplePatch } from "./example";
 import { alignShared, createNode, newId } from "./nodes";
@@ -323,6 +323,7 @@ export const useGraph = create<GraphState>((set, get) => {
             const outKind = portKind(src.data.type, sourceHandle ?? "", "out", src.data.params);
             const inKind = portKind(dst.data.type, targetHandle ?? "", "in", dst.data.params);
             if (!outKind || !inKind || !compatible(outKind, inKind)) return false;
+            if (!acceptsBlock(dst.data.type, targetHandle ?? "", src.data.type)) return false;
             const duplicate = edges.some(
                 (e) =>
                     e.source === source &&

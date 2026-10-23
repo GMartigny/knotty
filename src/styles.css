@@ -431,6 +431,18 @@ button {
     text-align: center;
 }
 
+/* Notes mode: the mixed output, on its own line under the grid. */
+.seq-mix {
+    justify-content: flex-end;
+    min-height: 26px;
+    margin-top: 4px;
+}
+
+.seq-mix-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 /* Notes mode: rows named after their note; sharps on a darker band, like a piano's black keys. */
 .seq.is-notes {
     gap: 3px;

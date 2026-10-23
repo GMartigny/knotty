@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { cableCount, center, clearMat, drag, loadPreset, node, nodeCount, open } from "./helpers";
+import { cableCount, center, clearMat, drag, loadPreset, node, nodeCount, open, peakLevel } from "./helpers";
 
 /** Adds a block by clicking it in the palette; returns its id. */
 async function add(page: Page, label: string) {
@@ -199,26 +199,30 @@ test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ pag
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0");
 });
 
-test("the sequencer in notes mode plays a melody: one note per voice, from the lowest", async ({ page }) => {
+test("the sequencer in notes mode plays the notes itself, with an Oscillator and an Envelope as models", async ({ page }) => {
     const seq = await add(page, "Sequencer");
-    const low = await add(page, "Oscillator");
-    const high = await add(page, "Oscillator");
+    const osc = await add(page, "Oscillator");
+    const env = await add(page, "Envelope");
+    const noise = await add(page, "Noise");
+    const out = await add(page, "Output");
     const block = node(page, seq);
     await block.getByRole("radio", { name: "Notes" }).click({ force: true });
-    // An octave of rows, named from C5 down to C4, and voice outputs instead of track outputs.
+    // An octave of rows, sound outputs instead of trigger outputs. With nothing plugged in: C4 to C5.
     await expect(block.locator("[data-row]")).toHaveCount(13);
-    await expect(block.locator(".seq-row-label").first()).toHaveText("C5");
     await expect(block.locator(".seq-row-label").last()).toHaveText("C4");
     await expect(block.locator('[data-handleid="row0"]')).toHaveCount(0);
-    await plug(page, socket(seq, "voice1"), socket(low, "note"));
-    await plug(page, socket(seq, "voice2"), socket(high, "note"));
-    // Light G4 and C5 on every step of the first beat: a two-note chord.
-    for (const label of ["C5", "G4"]) {
-        const row = block.locator(".seq-row", { has: page.locator(".seq-row-label", { hasText: new RegExp(`^${label}$`) }) });
-        for (let step = 0; step < 4; step++) await row.locator(".seq-step").nth(step).click({ force: true });
-    }
-    await expect(node(page, low).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0", { timeout: 5000 });
-    await expect(node(page, high).locator(".mini-scope")).toHaveAttribute("data-hz", "523.3", { timeout: 5000 });
+    await expect(block.locator('[data-handleid="note0"]')).toHaveCount(1);
+    // The Oscillator (220 Hz, A3) sets the bottom note; a Noise is refused as a model.
+    await plug(page, socket(noise, "out"), socket(seq, "voice"));
+    expect(await cableCount(page)).toBe(0);
+    await plug(page, socket(osc, "out"), socket(seq, "voice"));
+    await plug(page, socket(env, "out"), socket(seq, "shape"));
+    await expect(block.locator(".seq-row-label").last()).toHaveText("A3");
+    await expect(block.locator(".seq-row-label").first()).toHaveText("A4");
+    // Its mixed sound plays: the default pattern lights the top rows.
+    await plug(page, socket(seq, "out"), socket(out, "in"));
+    expect(await cableCount(page)).toBe(3);
+    await expect.poll(() => peakLevel(page, seq, 0.3), { timeout: 5000 }).toBeGreaterThanOrEqual(0.3);
 });
 
 test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {

@@ -14,6 +14,7 @@ interface LiveModule {
 type LiveCable =
     | { kind: "audio"; from: Tone.ToneAudioNode; to: Tone.InputNode }
     | { kind: "trigger"; target: string; port: string; unsubscribe(): void }
+    | { kind: "model"; target: string; port: string }
     | {
           kind: "mod";
           from: Tone.ToneAudioNode;
@@ -183,6 +184,15 @@ class AudioEngine {
             return;
         }
 
+        // A model input takes the plugged block's settings, read live, not its sound.
+        const targetType = this.modules.get(edge.target)?.type;
+        if (targetType && registry[targetType]?.inputs.find((p) => p.id === inPort)?.model) {
+            const source = edge.source;
+            dst.setModel?.(inPort, () => this.modules.get(source)?.params ?? {});
+            this.cables.set(edge.id, { kind: "model", target: edge.target, port: inPort });
+            return;
+        }
+
         const from = src.output(outPort);
         if (!from) return;
 
@@ -237,6 +247,10 @@ class AudioEngine {
 
     private unplug(id: string, cable: LiveCable) {
         this.cables.delete(id);
+        if (cable.kind === "model") {
+            this.modules.get(cable.target)?.instance.setModel?.(cable.port, null);
+            return;
+        }
         if (cable.kind === "trigger") {
             cable.unsubscribe();
             this.pulses.delete(id);

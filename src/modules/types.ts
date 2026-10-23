@@ -16,9 +16,14 @@ export interface PortDef {
     row?: number;
     /** Only shown (and pluggable) when another setting has this value, e.g. a sequencer mode. */
     when?: Condition;
+    /**
+     * Model input: the block takes the *settings* of the block plugged in (see `setModel`), not its sound.
+     * `accepts` lists the block types that can be plugged.
+     */
+    model?: boolean;
+    accepts?: string[];
 }
 
-/** Trigger at audio time `time`, optionally with a note (frequency in Hz). */
 /**
  * How a trigger is played. Without a gate, it's a hit of a set length (a sequencer step);
  * "on" and "off" are a key pressed then released, and the note lasts as long as the key is held.
@@ -140,6 +145,8 @@ export interface ModuleInstance {
     play?(value: number, down: boolean): void;
     /** Real-time modulation of a setting, if that setting is an audio parameter. */
     modTarget?(paramId: string): ModTarget | undefined;
+    /** Model input: the engine provides a function returning the plugged block's current settings, or null. */
+    setModel?(portId: string, read: (() => ParamValues) | null): void;
     /** Otherwise, modulation read on demand: the engine provides a function returning the signal (-1…1). */
     setModSource?(paramId: string, read: (() => number) | null): void;
     dispose(): void;

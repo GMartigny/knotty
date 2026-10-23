@@ -1,7 +1,8 @@
 import { Handle, Position } from "@xyflow/react";
 import { usePosition } from "../audio/usePosition";
-import { MODE, SEQ_STEPS, isStepOn, rowNote, rowOutput, rowParam, sequencer, toggleStep } from "../modules/sequencer";
-import { noteName } from "../modules/notes";
+import { DEFAULT_VOICE, MODE, SEQ_STEPS, isStepOn, noteOutput, rowFrequency, rowOutput, rowParam, sequencer, toggleStep } from "../modules/sequencer";
+import { midiOf, noteName } from "../modules/notes";
+import { useGraph } from "../store/graph";
 import { rowCount, type ParamValues } from "../modules/types";
 
 const BEAT = 4;
@@ -17,12 +18,18 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
     const playhead = usePosition(nodeId);
     // Notes mode: a piano roll, each row named after its note, sharps darker like black keys.
     const notes = params.mode === MODE.notes;
+    // The bottom row plays the frequency of the Oscillator plugged in as a model.
+    const base = useGraph((g) => {
+        const cable = g.edges.find((e) => e.target === nodeId && e.targetHandle === "voice" && !e.data?.dropping);
+        return g.nodes.find((n) => n.id === cable?.source)?.data.params.frequency ?? DEFAULT_VOICE.frequency;
+    });
+    const rows = rowCount(sequencer, params);
 
     return (
         <div className={`seq ${notes ? "is-notes" : ""}`} role="grid" aria-label="Sequencer steps">
-            {Array.from({ length: rowCount(sequencer, params) }, (_, row) => {
+            {Array.from({ length: rows }, (_, row) => {
                 const pattern = params[rowParam(row)] ?? 0;
-                const name = notes ? noteName(rowNote(params, row)) : String(row + 1);
+                const name = notes ? noteName(midiOf(rowFrequency(base, rows, row))) : String(row + 1);
                 return (
                     <div className={`seq-row ${notes && name.includes("♯") ? "is-sharp" : ""}`} role="row" key={row} data-row={row}>
                         <span className="seq-row-label" aria-hidden>
@@ -50,18 +57,22 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                                 </div>
                             ))}
                         </div>
-                        {!notes && (
-                            <Handle
-                                id={rowOutput(row)}
-                                type="source"
-                                position={Position.Right}
-                                className="socket socket-trigger"
-                                title={`Row ${row + 1} output`}
-                            />
-                        )}
+                        <Handle
+                            id={notes ? noteOutput(row) : rowOutput(row)}
+                            type="source"
+                            position={Position.Right}
+                            className={`socket ${notes ? "socket-audio" : "socket-trigger"}`}
+                            title={notes ? `${name} sound` : `Row ${row + 1} output`}
+                        />
                     </div>
                 );
             })}
+            {notes && (
+                <div className="seq-row seq-mix">
+                    <span className="seq-mix-label">All notes</span>
+                    <Handle id="out" type="source" position={Position.Right} className="socket socket-audio" title="All notes, mixed" />
+                </div>
+            )}
         </div>
     );
 }

@@ -1,4 +1,4 @@
-import { compatible, portKind, registry } from "../modules/registry";
+import { acceptsBlock, compatible, portKind, registry } from "../modules/registry";
 import type { ParamValues } from "../modules/types";
 import { COMMENT_SIZE } from "../modules/comment";
 import type { CableEdge, ModuleNode } from "./graph";
@@ -59,7 +59,7 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
         // Sockets on hidden rows don't count: their cables are dropped.
         const out = portKind(src.type, e.sourceHandle, "out", src.params);
         const into = portKind(dst.type, e.targetHandle, "in", dst.params);
-        if (!out || !into || !compatible(out, into)) continue;
+        if (!out || !into || !compatible(out, into) || !acceptsBlock(dst.type, e.targetHandle, src.type)) continue;
         const cable = createCable(e.source, e.sourceHandle, e.target, e.targetHandle, out);
         edges.set(cable.id, cable);
     }

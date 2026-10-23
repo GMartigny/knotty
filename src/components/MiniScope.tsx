@@ -57,6 +57,8 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
         /** Scrolling mode: values timestamped on the audio clock (s). */
         const trail: { t: number; v: number }[] = [];
         let frame = 0;
+        /** Shape of the ideal curve on display (before sound starts), -1 if none. */
+        let idealShown = -1;
 
         const y = (v: number) => H / 2 - v * (H / 2 - PAD);
 
@@ -88,10 +90,14 @@ export function MiniScope({ nodeId, frequency, shape }: Props) {
             const gain = 1 / SOURCE_LEVEL;
 
             if (!samples) {
-                // Sound not started yet: ideal shape over a few cycles.
-                draw(Array.from({ length: 241 }, (_, i) => ideal(form.current, (i / 240) * CYCLES)));
+                // Sound not started yet: ideal shape over a few cycles, drawn again only when the shape changes.
+                if (idealShown !== form.current) {
+                    idealShown = form.current;
+                    draw(Array.from({ length: 241 }, (_, i) => ideal(form.current, (i / 240) * CYCLES)));
+                }
                 return;
             }
+            idealShown = -1;
 
             const len = samples.length;
             // Frequency actually playing (a note may have replaced the slider's).

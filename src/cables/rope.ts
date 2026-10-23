@@ -23,6 +23,12 @@ const ROPE = {
     iterations: 10,
     /** Below this displacement per step (px), the rope is considered still. */
     sleepThreshold: 0.03,
+    /**
+     * A long cable can keep trembling by a pixel forever (constraints that never quite settle):
+     * after this many steps awake (5 s), a tremble below `trembleThreshold` px counts as still.
+     */
+    maxAwakeSteps: 600,
+    trembleThreshold: 2,
 };
 
 const pointCountFor = (distance: number) =>
@@ -60,6 +66,8 @@ export class Rope {
     private b: Vec;
     private awake = true;
     private calmFrames = 0;
+    /** Steps since the rope was last woken up. */
+    private awakeSteps = 0;
     private pinA = true;
     private pinB = true;
     /** Segment length frozen once the cable is unplugged. */
@@ -90,6 +98,7 @@ export class Rope {
         this.b = { ...b };
         this.awake = true;
         this.calmFrames = 0;
+        this.awakeSteps = 0;
         // An unplugged cable keeps its resolution: it just falls.
         if (this.frozenSegment === undefined) this.adaptResolution();
     }
@@ -122,6 +131,7 @@ export class Rope {
         this.frozenSegment ??= this.restSegment();
         this.awake = true;
         this.calmFrames = 0;
+        this.awakeSteps = 0;
         // Small upward jolt for the "yanking the plug" effect.
         const i = end === "a" ? 0 : this.points.length - 1;
         this.prev[i].y = this.points[i].y + 6;
@@ -134,6 +144,7 @@ export class Rope {
         this.frozenSegment = undefined;
         this.awake = true;
         this.calmFrames = 0;
+        this.awakeSteps = 0;
         this.adaptResolution();
     }
 
@@ -204,7 +215,8 @@ export class Rope {
             if (!free(i)) continue;
             motion = Math.max(motion, Math.abs(points[i].x - prev[i].x) + Math.abs(points[i].y - prev[i].y));
         }
-        this.calmFrames = motion < ROPE.sleepThreshold ? this.calmFrames + 1 : 0;
+        const threshold = ++this.awakeSteps > ROPE.maxAwakeSteps ? ROPE.trembleThreshold : ROPE.sleepThreshold;
+        this.calmFrames = motion < threshold ? this.calmFrames + 1 : 0;
         if (this.calmFrames > 20) this.awake = false;
     }
 

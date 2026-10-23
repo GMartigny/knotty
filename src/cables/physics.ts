@@ -16,12 +16,14 @@ const tick = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     accumulator += dt;
-    let awake = false;
+    // Only ropes awake at the start of the frame move: the others keep their path as drawn.
+    const moving = [...entries.values()].filter((e) => e.rope.isAwake);
     while (accumulator >= STEP) {
-        for (const { rope } of entries.values()) rope.step(STEP);
+        for (const { rope } of moving) rope.step(STEP);
         accumulator -= STEP;
     }
-    for (const { rope, paths } of entries.values()) {
+    let awake = false;
+    for (const { rope, paths } of moving) {
         const d = rope.toPath();
         for (const p of paths) p.setAttribute("d", d);
         awake ||= rope.isAwake;

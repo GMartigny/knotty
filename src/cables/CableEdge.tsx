@@ -71,7 +71,7 @@ export function CableEdge({
 
     // An audio cable lights up with the level of the module feeding it,
     // a trigger cable with each pulse it carries.
-    useLevel(data?.kind === "trigger" ? id : source, group);
+    useLevel(data?.kind === "trigger" ? id : source, main);
 
     const color = KIND_COLOR[data?.kind ?? "audio"];
     const state = dropping ? "is-dropping" : grabbed ? "is-grabbed" : selected ? "is-selected" : "";

@@ -49,7 +49,11 @@ function usePatchShortcuts(pointer: () => XYPosition | undefined) {
 }
 
 /** Cable "in hand" while pulling: a slightly sagging curve. */
-function DraggingCable({ fromX, fromY, toX, toY }: ConnectionLineComponentProps) {
+function DraggingCable({ fromNode, fromHandle, fromX: edgeX, fromY: edgeY, toX, toY }: ConnectionLineComponentProps) {
+    // From the middle of the pulled socket, like plugged cables (React Flow gives its outer edge).
+    const origin = fromNode.internals.positionAbsolute;
+    const fromX = fromHandle ? origin.x + fromHandle.x + fromHandle.width / 2 : edgeX;
+    const fromY = fromHandle ? origin.y + fromHandle.y + fromHandle.height / 2 : edgeY;
     const sag = Math.min(80, Math.hypot(toX - fromX, toY - fromY) * 0.25);
     const d = `M ${fromX} ${fromY} Q ${(fromX + toX) / 2} ${(fromY + toY) / 2 + sag} ${toX} ${toY}`;
     return (

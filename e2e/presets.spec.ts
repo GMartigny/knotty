@@ -36,6 +36,25 @@ const badlyFramed = () => {
     return bad;
 };
 
+/** Cables whose end isn't plugged into the middle of its input socket (more than 6 px off, in flow units: blocks swell a little with their glow). */
+const looseCables = () => {
+    const viewport = document.querySelector(".react-flow__viewport")!;
+    const zoom = new DOMMatrix(getComputedStyle(viewport).transform).a;
+    const origin = viewport.getBoundingClientRect();
+    const bad: string[] = [];
+    for (const edge of document.querySelectorAll(".react-flow__edge")) {
+        const id = edge.getAttribute("data-testid")!.replace("rf__edge-", "");
+        const target = id.split("->")[1];
+        const [node, handle] = [target.slice(0, target.indexOf(":")), target.slice(target.indexOf(":") + 1)];
+        const socket = document.querySelector(`.react-flow__node[data-id="${node}"] [data-handleid="${handle}"]`)!.getBoundingClientRect();
+        const d = edge.querySelector(".cable-main")!.getAttribute("d")!.match(/-?[\d.]+/g)!.map(Number);
+        const dx = d.at(-2)! - ((socket.left + socket.right) / 2 - origin.left) / zoom;
+        const dy = d.at(-1)! - ((socket.top + socket.bottom) / 2 - origin.top) / zoom;
+        if (Math.hypot(dx, dy) > 6) bad.push(`${id}: ${dx.toFixed(1)}, ${dy.toFixed(1)}`);
+    }
+    return bad;
+};
+
 const PRESETS = [
     { name: "Soft", tracks: ["env", "out"] },
     { name: "Groove", tracks: ["kick-env", "snare-filter", "hat-filter", "bass-filter", "mel-env", "mix", "out"] },
@@ -51,6 +70,7 @@ for (const { name, tracks } of PRESETS) {
         await loadPreset(page, name);
         expect(await page.evaluate(overlaps)).toEqual([]);
         expect(await page.evaluate(badlyFramed)).toEqual([]);
+        expect(await page.evaluate(looseCables)).toEqual([]);
         for (const id of tracks) expect(await peakLevel(page, id, 0.3), id).toBeGreaterThanOrEqual(0.3);
         expect(errors).toEqual([]);
     });

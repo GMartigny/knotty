@@ -170,7 +170,7 @@ function softPatch(): Patch {
 }
 
 /**
- * "Metal" patch: a full band at 150 bpm, on two sequencers.
+ * "Metal" patch: a full band at 140 bpm.
  *
  * Rhythm section ("drums" sequencer, 5 rows) — row 1: galloping double kick (very dry low sine);
  * row 2: snare on 2 and 4 (noise, band-pass); row 3: eighth-note hi-hat (noise, high-pass);
@@ -182,8 +182,8 @@ function softPatch(): Patch {
  *
  * Lead guitars ("solo" and "harmony" sequencers, Notes mode): a tune in E minor written on the piano roll,
  * and a second guitar a third above, like twin guitars. Both copy the "lead" Envelope and the saw Oscillator
- * feeding it (bottom row E4, slight glide, light vibrato). Each guitar has its own distortion (two notes
- * through one distortion grind), then a shared echo and cab-like filter.
+ * feeding it (bottom row E4, slight glide, a little noise on its pitch). A Mixer blends the two guitars
+ * (the harmony a bit lower), then a light distortion, echo and a cab-like filter.
  *
  * A 7-channel mixer (one per instrument) → subtle reverb → output.
  */
@@ -213,12 +213,12 @@ function metalPatch(): Patch {
         // ——— Comment frames, to find your way around ———
         note("note-drums", -40, -70, 1360, 1900, "Rhythm section: kick, snare, hi-hat, cymbal, and row 5 drives the bass below"),
         note("note-band", -40, 1845, 1660, 1040, "Rhythm guitar (E + B power chord) and bass"),
-        note("note-solo", -380, SOLO_Y - 100, 2300, 980 + HARM_DY, "Twin lead guitars on Notes sequencers: the tune, and a second guitar a third above"),
+        note("note-solo", -380, SOLO_Y - 100, 2600, 980 + HARM_DY, "Twin lead guitars on Notes sequencers: the tune, and a second guitar a third above"),
         note("note-mix", 2260, 1630, 900, 380, "Mix: one channel per instrument → reverb → output"),
 
         // ——— Drums ———
         node("drums", "sequencer", cSeq, 700, {
-            bpm: 150,
+            bpm: 140,
             row0: gallop,
             row1: steps(5, 13),
             row2: steps(1, 3, 5, 7, 9, 11, 13, 15),
@@ -239,7 +239,7 @@ function metalPatch(): Patch {
 
         // ——— Rhythm guitar ———
         // The rhythm guitar's chug, on a one-row sequencer.
-        node("band", "sequencer", cSeq, 2420, { bpm: 150, rows: 1, row0: gallop }),
+        node("band", "sequencer", cSeq, 2420, { bpm: 140, rows: 1, row0: gallop }),
         node("gtr-root", "sine", cSrc, 1900, { shape: 3, frequency: 82.4 }),
         node("gtr-fifth", "sine", cSrc, 2230, { shape: 3, frequency: 123.5 }),
         node("gtr-env", "envelope", cEnv, 1900, { attack: 0.003, decay: 0.1, sustain: 0.15, hold: 0.03, release: 0.06 }),
@@ -252,30 +252,32 @@ function metalPatch(): Patch {
         node("bass-filter", "filter", cFx1, 2440, { mode: 0, frequency: 500, Q: 2 }),
 
         // ——— Lead guitars ———
-        // The guitar's sound: a saw on E4 (the bottom row of the solo), barely slurred, with a light vibrato.
+        // The guitar's sound: a saw on E4 (the bottom row of the solo), barely slurred, its pitch slightly unsteady.
         node("lead-osc", "sine", cSeq, SOLO_Y, { shape: 3, frequency: 329.63, glide: 0.015 }),
-        node("vibrato", "sine", cSeq - 340, SOLO_Y, { shape: 0, frequency: 6 }),
-        // Vibrato depth: a one-channel Mixer at 1% ≈ ±1%, just enough to bring held notes to life.
-        node("vibrato-depth", "mixer", cSeq - 340, SOLO_Y + 340, { channels: 1, level1: 1 }),
+        node("pitch-noise", "noise", cSeq - 340, SOLO_Y),
+        // Noise on the pitch, through a one-channel Mixer at 5%: a living, slightly rough note.
+        node("pitch-depth", "mixer", cSeq - 340, SOLO_Y + 340, { channels: 1, level1: 5 }),
         // The shape of each note, copied by the solo sequencer.
         node("lead-env", "envelope", cSeq, SOLO_Y + 340, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.07, release: 0.05 }),
         // Twin leads in E minor, from E4 up to G5: the tune, and a second guitar a third above (E-G, F♯-A, G-B…).
-        // Each guitar has its own sequencer and distortion: two notes through one distortion would grind.
+        // One sequencer per guitar, so each can be balanced in the Mixer.
         node("solo", "sequencer", cSeq + 300, SOLO_Y - 40, {
-            bpm: 150,
+            bpm: 140,
             mode: 1,
             ...score(16, tune.map(([step, s]) => [step, [s]])),
         }),
         node("harmony", "sequencer", cSeq + 300, SOLO_Y + HARM_DY - 40, {
-            bpm: 150,
+            bpm: 140,
             mode: 1,
             ...score(16, tune.map(([step, s]) => [step, [third(s)]])),
         }),
-        node("lead-dist", "distortion", cFx1, SOLO_Y + 20, { drive: 45, wet: 1 }),
-        node("harm-dist", "distortion", cFx1, SOLO_Y + HARM_DY + 20, { drive: 45, wet: 1 }),
-        node("lead-echo", "echo", cFx2, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
+        // Both guitars, the harmony a bit behind the tune.
+        node("lead-mix", "mixer", cFx1, SOLO_Y + 20, { channels: 2, level1: 100, level2: 67 }),
+        // Light distortion: two notes through a heavy one would grind.
+        node("lead-dist", "distortion", cFx2, SOLO_Y + 20, { drive: 8.5, wet: 1 }),
+        node("lead-echo", "echo", cFx3, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
         // Filtered low, like an amp's speaker cab: removes the harsh fizz.
-        node("lead-filter", "filter", cFx3, SOLO_Y + 20, { mode: 0, frequency: 2600, Q: 1.8 }),
+        node("lead-filter", "filter", cFx3 + 300, SOLO_Y + 20, { mode: 0, frequency: 3177, Q: 1.8 }),
 
         // ——— Mix ———
         // One channel per instrument: kick, snare, hi-hat, cymbal, rhythm guitar, bass, solos.
@@ -320,14 +322,14 @@ function metalPatch(): Patch {
         cable("bass-env", "out", "bass-filter", "in"),
 
         // Lead guitars: the Oscillator feeds the Envelope, which the solo sequencer copies.
-        cable("vibrato", "out", "vibrato-depth", "in1"),
-        cable("vibrato-depth", "out", "lead-osc", "mod:frequency"),
+        cable("pitch-noise", "out", "pitch-depth", "in1"),
+        cable("pitch-depth", "out", "lead-osc", "mod:frequency"),
         cable("lead-osc", "out", "lead-env", "in"),
         cable("lead-env", "out", "solo", "model"),
         cable("lead-env", "out", "harmony", "model"),
-        cable("solo", "out", "lead-dist", "in"),
-        cable("harmony", "out", "harm-dist", "in"),
-        cable("harm-dist", "out", "lead-echo", "in"),
+        cable("solo", "out", "lead-mix", "in1"),
+        cable("harmony", "out", "lead-mix", "in2"),
+        cable("lead-mix", "out", "lead-dist", "in"),
         cable("lead-dist", "out", "lead-echo", "in"),
         cable("lead-echo", "out", "lead-filter", "in"),
 

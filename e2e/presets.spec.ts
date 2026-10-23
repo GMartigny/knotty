@@ -60,7 +60,7 @@ const PRESETS = [
     { name: "Groove", tracks: ["kick-env", "snare-filter", "hat-filter", "bass-filter", "mel-env", "mix", "out"] },
     {
         name: "Metal",
-        tracks: ["kick-env", "snare-filter", "hat-filter", "crash-filter", "gtr-cab", "bass-filter", "solo", "harmony", "lead-filter", "out"],
+        tracks: ["kick-env", "snare-filter", "hat-filter", "crash-filter", "gtr-cab", "bass-filter", "solo", "harmony", "lead-mix", "lead-filter", "out"],
     },
 ];
 

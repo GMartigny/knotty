@@ -180,9 +180,10 @@ function softPatch(): Patch {
  * Rhythm guitar ("band" sequencer, 1 row): E + B power chord in sawtooth, palm-muted "chug" locked
  * to the double kick, heavily distorted then filtered like a speaker cab.
  *
- * Lead guitars ("solo" sequencer, Notes mode): a tune in E minor written on the piano roll, every note
- * doubled a third above, like twin guitars. The sequencer copies the "lead" Envelope and the saw Oscillator
- * feeding it (bottom row E4, slight glide, light vibrato); then distortion, echo and a cab-like filter.
+ * Lead guitars ("solo" and "harmony" sequencers, Notes mode): a tune in E minor written on the piano roll,
+ * and a second guitar a third above, like twin guitars. Both copy the "lead" Envelope and the saw Oscillator
+ * feeding it (bottom row E4, slight glide, light vibrato). Each guitar has its own distortion (two notes
+ * through one distortion grind), then a shared echo and cab-like filter.
  *
  * A 7-channel mixer (one per instrument) → subtle reverb → output.
  */
@@ -198,12 +199,21 @@ function metalPatch(): Patch {
     const gallop = steps(1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15, 16);
     const dry = { attack: 0.001, sustain: 0, hold: 0.01 };
     const SOLO_Y = 3000;
+    const HARM_DY = 700;
+    // The solo: [step, semitones above E4], in E minor.
+    const tune: [number, number][] = [[1, 0], [3, 2], [4, 3], [5, 7], [7, 5], [8, 3], [9, 2], [11, 3], [12, 5], [13, 7], [15, 12]];
+    // A diatonic third above, in E minor (E F♯ G A B C D): 3 or 4 semitones depending on the degree.
+    const E_MINOR = [0, 2, 3, 5, 7, 8, 10];
+    const third = (s: number) => {
+        const degree = E_MINOR.indexOf(s % 12) + 2;
+        return Math.floor(s / 12) * 12 + E_MINOR[degree % 7] + (degree >= 7 ? 12 : 0);
+    };
 
     const nodes: ModuleNode[] = [
         // ——— Comment frames, to find your way around ———
         note("note-drums", -40, -70, 1360, 1900, "Rhythm section: kick, snare, hi-hat, cymbal, and row 5 drives the bass below"),
         note("note-band", -40, 1845, 1660, 1040, "Rhythm guitar (E + B power chord) and bass"),
-        note("note-solo", -380, SOLO_Y - 100, 2300, 980, "Twin lead guitars, written on a Notes sequencer: each note doubled a third above"),
+        note("note-solo", -380, SOLO_Y - 100, 2300, 980 + HARM_DY, "Twin lead guitars on Notes sequencers: the tune, and a second guitar a third above"),
         note("note-mix", 2260, 1630, 900, 380, "Mix: one channel per instrument → reverb → output"),
 
         // ——— Drums ———
@@ -248,26 +258,21 @@ function metalPatch(): Patch {
         // Vibrato depth: a one-channel Mixer at 1% ≈ ±1%, just enough to bring held notes to life.
         node("vibrato-depth", "mixer", cSeq - 340, SOLO_Y + 340, { channels: 1, level1: 1 }),
         // The shape of each note, copied by the solo sequencer.
-        node("lead-env", "envelope", cSeq, SOLO_Y + 340, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.14, release: 0.12 }),
-        // Twin leads in E minor, from E4 up to G5: every note of the tune doubled a third above (E-G, F♯-A, G-B…).
+        node("lead-env", "envelope", cSeq, SOLO_Y + 340, { attack: 0.004, decay: 0.18, sustain: 0.55, hold: 0.07, release: 0.05 }),
+        // Twin leads in E minor, from E4 up to G5: the tune, and a second guitar a third above (E-G, F♯-A, G-B…).
+        // Each guitar has its own sequencer and distortion: two notes through one distortion would grind.
         node("solo", "sequencer", cSeq + 300, SOLO_Y - 40, {
             bpm: 150,
             mode: 1,
-            ...score(16, [
-                [1, [0, 3]],
-                [3, [2, 5]],
-                [4, [3, 7]],
-                [5, [7, 10]],
-                [7, [5, 8]],
-                [8, [3, 7]],
-                [9, [2, 5]],
-                [11, [3, 7]],
-                [12, [5, 8]],
-                [13, [7, 10]],
-                [15, [12, 15]],
-            ]),
+            ...score(16, tune.map(([step, s]) => [step, [s]])),
+        }),
+        node("harmony", "sequencer", cSeq + 300, SOLO_Y + HARM_DY - 40, {
+            bpm: 150,
+            mode: 1,
+            ...score(16, tune.map(([step, s]) => [step, [third(s)]])),
         }),
         node("lead-dist", "distortion", cFx1, SOLO_Y + 20, { drive: 45, wet: 1 }),
+        node("harm-dist", "distortion", cFx1, SOLO_Y + HARM_DY + 20, { drive: 45, wet: 1 }),
         node("lead-echo", "echo", cFx2, SOLO_Y + 20, { time: 2, feedback: 0.3, wet: 0.2 }),
         // Filtered low, like an amp's speaker cab: removes the harsh fizz.
         node("lead-filter", "filter", cFx3, SOLO_Y + 20, { mode: 0, frequency: 2600, Q: 1.8 }),
@@ -319,7 +324,10 @@ function metalPatch(): Patch {
         cable("vibrato-depth", "out", "lead-osc", "mod:frequency"),
         cable("lead-osc", "out", "lead-env", "in"),
         cable("lead-env", "out", "solo", "model"),
+        cable("lead-env", "out", "harmony", "model"),
         cable("solo", "out", "lead-dist", "in"),
+        cable("harmony", "out", "harm-dist", "in"),
+        cable("harm-dist", "out", "lead-echo", "in"),
         cable("lead-dist", "out", "lead-echo", "in"),
         cable("lead-echo", "out", "lead-filter", "in"),
 

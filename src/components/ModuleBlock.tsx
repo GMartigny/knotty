@@ -11,6 +11,7 @@ import { FilterCurve } from "./FilterCurve";
 import { MiniPiano } from "./MiniPiano";
 import { NoteDisplay } from "./NoteDisplay";
 import { DiceFace } from "./DiceFace";
+import { TransposeDisplay } from "./TransposeDisplay";
 import { CommentBlock } from "./CommentBlock";
 import { isActive, modPort, rowCount, type ParamValues, type PortDef } from "../modules/types";
 import { RowResizer } from "./RowResizer";
@@ -20,6 +21,7 @@ const DISPLAYS: Record<string, (id: string, params: ParamValues) => ReactNode> =
     envelope: (_, params) => <EnvelopeShape params={params} />,
     keyboard: (id) => <MiniPiano nodeId={id} />,
     scale: (id) => <NoteDisplay nodeId={id} />,
+    transpose: (id) => <TransposeDisplay nodeId={id} />,
     random: (id, params) => <DiceFace nodeId={id} count={params.values ?? 6} />,
     filter: (_, params) => <FilterCurve params={params} />,
     sine: (id, params) => <MiniScope nodeId={id} frequency={params.frequency} shape={params.shape ?? 0} />,

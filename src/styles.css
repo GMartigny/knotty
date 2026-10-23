@@ -1403,3 +1403,9 @@ button {
         animation: none;
     }
 }
+
+/* Transpose: two notes on one line, a little smaller than the Scale's single note. */
+.transpose-notes {
+    font-size: 1.15rem;
+    white-space: nowrap;
+}

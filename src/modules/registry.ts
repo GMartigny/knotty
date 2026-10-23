@@ -14,9 +14,10 @@ import { distortion } from "./distortion";
 import { scale } from "./scale";
 import { comment } from "./comment";
 import { random } from "./random";
+import { transpose } from "./transpose";
 
 /** Adding a module = importing it here. */
-const modules: ModuleDef[] = [sequencer, keyboard, scale, random, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output, comment];
+const modules: ModuleDef[] = [sequencer, keyboard, scale, transpose, random, sine, noise, envelope, mixer, volume, filter, echo, distortion, reverb, output, comment];
 
 export const registry: Record<string, ModuleDef> = Object.fromEntries(modules.map((m) => [m.type, m]));
 

@@ -160,6 +160,22 @@ test("the keyboard plays notes into an oscillator", async ({ page }) => {
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "261.6");
 });
 
+test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ page }) => {
+    const keys = await add(page, "Keyboard");
+    const shift = await add(page, "Transpose");
+    const osc = await add(page, "Oscillator");
+    await plug(page, socket(keys, "out"), socket(shift, "in"));
+    await plug(page, socket(shift, "out"), socket(osc, "note"));
+    // −24…+24 semitones on the slider: +7 is at 31/48.
+    await node(page, shift).locator("input.slider").fill("0.646");
+    await expect(node(page, shift).locator(".param output")).toHaveText("7 st");
+    await page.locator(".mat").click({ position: { x: 5, y: 5 } });
+    await page.keyboard.down("KeyA");
+    await page.keyboard.up("KeyA");
+    await expect(node(page, shift).locator(".note-display")).toHaveText("C4 → G4");
+    await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0");
+});
+
 test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {
     const keys = await add(page, "Keyboard");
     const osc = await add(page, "Oscillator");

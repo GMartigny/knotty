@@ -13,6 +13,7 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 - **Make sound**: sources (Oscillator, Noise) play continuously; an Envelope triggered by the Sequencer or the Keyboard cuts them into notes (a key held on the Keyboard holds the note). Everything ends up in the Output.
 - **Modulate**: plug a slow Oscillator into a setting's socket (a filter's frequency, another oscillator's…) to make it move on its own.
 - **Add chance**: the Random block rolls a die on each trigger and holds the value. Plug it into a Scale for random in-tune melodies, or into a setting to vary every note. "Values" sets how many faces the die has; for smooth drifts, use a slow Oscillator instead.
+- **Chords and octaves**: a Transpose block moves the notes going through by some semitones. Behind a Keyboard, three of them (0, +4, +7) feeding three Oscillators play a major chord; −12 or +12 moves a line an octave.
 - **More rows**: drag the grip on the bottom edge of a Sequencer or Mixer to add or remove rows (up to 16).
 - **Stay organized**: the Comment block is a resizable frame with some text, to name the parts of a composition. Move it by its ⠿ grip; clicks elsewhere in the frame go through to the mat and the blocks.
 - **Presets**: hold the big cross in the top right for 2 seconds to clear the mat, then "Load a preset" offers Soft, Groove and Metal.

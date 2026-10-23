@@ -31,8 +31,14 @@ A trigger cable carries no sound: the engine subscribes the input (`trigger`) to
 
 ## Checking
 
-- `npm run build` (includes `tsc -b`, tests included).
-- `npm test`: Vitest unit tests next to the code (`src/**/*.test.ts`, jsdom). They cover the logic that doesn't need Web Audio: the store (connections, undo/redo, rows, shared tempo), persistence, presets' integrity, settings math, notes, the rope physics, the Scale and Random logic. `npm run test:coverage` for the report.
-- `npm run test:e2e`: Playwright tests in `e2e/` on the built app (`vite preview`, port 4173): presets' layout and sound, editing (palette, cables, undo, hold-to-clear, rows, comments, keyboard, dice, persistence). They cover the audio engine and the UI, which unit tests don't.
+Quality gates run on their own; don't spend time re-running the whole suite by hand:
+
+- **Vercel** builds with `npm test && npm run build` (`vercel.json`): a failing unit test or type error stops the deployment, and the site stays on the previous version.
+- **GitHub Actions** (`.github/workflows/ci.yml`) runs on every push and pull request: typecheck + unit tests with coverage, and the Playwright browser tests (report uploaded as an artifact on failure).
+
+Locally, run only what you touched: `npm test -- <file>` (Vitest, `src/**/*.test.ts`, jsdom) or `npm run test:e2e -- -g "<name>"` (Playwright, `e2e/`, on `vite preview` port 4173).
+
+- Unit tests cover the logic that doesn't need Web Audio: the store (connections, undo/redo, rows, shared tempo, copy/paste), persistence, presets' integrity, settings math, notes, the rope physics, the Scale and Random logic.
+- Browser tests cover the audio engine and the UI: presets' layout and sound, palette, cables, undo, hold-to-clear, rows, comments, keyboard, dice, copy/paste, persistence.
 - Keep logic out of components and Tone nodes when it can be pure (e.g. `pickNote`, `fromSlider`), so it can be unit-tested.
-- Automatic Vercel deployment on every push to `main`.
+- New feature → new tests next to it, in the same commit.

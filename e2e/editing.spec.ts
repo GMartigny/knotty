@@ -21,13 +21,25 @@ test.beforeEach(async ({ page }) => {
     await clearMat(page);
 });
 
-test("resting on a palette block shows what it does", async ({ page }) => {
+test("resting on a palette block shows what it does, above the start screen", async ({ page }) => {
+    // Fresh page: the "Start the sound" screen still covers the mat.
+    await page.goto("/");
+    await expect(page.locator(".start")).toBeVisible();
     const item = page.locator(".palette-item", { hasText: "Filter" });
     await item.hover();
     const tip = page.getByRole("tooltip");
     await expect(tip).toBeVisible();
     await expect(tip).toContainText("Keeps the low, the high or the middle frequencies");
     await expect(item).toHaveAttribute("aria-describedby", "palette-tip");
+    // Nothing on the mat covers it.
+    const box = (await tip.boundingBox())!;
+    const onTop = await page.evaluate(([x, y]) => {
+        // The tooltip lets the pointer through: make it hittable just to ask what is on top.
+        const tip = document.querySelector<HTMLElement>(".palette-tip")!;
+        tip.style.pointerEvents = "auto";
+        return document.elementFromPoint(x, y)?.closest(".palette-tip") === tip;
+    }, [box.x + box.width - 20, box.y + 20]);
+    expect(onTop).toBe(true);
     await page.mouse.move(800, 400);
     await expect(tip).toHaveCount(0);
 });

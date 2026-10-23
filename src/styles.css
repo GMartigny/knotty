@@ -154,6 +154,8 @@ button {
 
 .mat {
     position: relative;
+    /* Its overlays (start screen, clear button…) stack inside the mat, under the palette and its tooltips. */
+    isolation: isolate;
     background: var(--mat);
 }
 

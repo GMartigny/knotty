@@ -85,6 +85,8 @@ interface GraphState {
     clearAll(): void;
     /** Replaces the mat with a preset (see EXAMPLES). */
     loadExample(id?: string): void;
+    /** Replaces the whole patch (a shared link), as one undo step. */
+    replacePatch(patch: { nodes: ModuleNode[]; edges: CableEdge[] }): void;
     /** Undoes the last change to the patch (Ctrl+Z). */
     undo(): void;
     /** Redoes the last undone change (Ctrl+Shift+Z, Ctrl+Y). */
@@ -389,6 +391,11 @@ export const useGraph = create<GraphState>((set, get) => {
             record();
             // The audio engine computes the diff: old blocks are disposed, new ones created.
             set(examplePatch(id));
+        },
+
+        replacePatch({ nodes, edges }) {
+            record();
+            set({ nodes, edges, grab: null });
         },
 
         undo: () => restore(past, future),

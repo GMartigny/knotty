@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadPatch, savePatch } from "./persist";
+import { loadPatch, readPatch, savePatch, toCompact } from "./persist";
+import { EXAMPLES, examplePatch } from "./example";
 import { createCable, createNode } from "./nodes";
 
-const KEY = "knotty:patch:v1";
+const KEY = "knotty:patch:v2";
 const store = (value: unknown) => localStorage.setItem(KEY, typeof value === "string" ? value : JSON.stringify(value));
 
 beforeEach(() => localStorage.clear());
@@ -13,29 +14,33 @@ describe("loading a saved patch", () => {
         expect(loadPatch()).toBeNull();
         store("{oops");
         expect(loadPatch()).toBeNull();
-        store({ nodes: "no" });
+        store({ v: 2, n: "no", e: [] });
+        expect(loadPatch()).toBeNull();
+        store({ v: 2, n: [3], e: [] });
         expect(loadPatch()).toBeNull();
     });
 
     it("cleans it up for the current version", () => {
         store({
-            nodes: [
-                { id: "s1", type: "sequencer", x: 0, y: 0, params: { bpm: 999, rows: 40, row0: 5, ghost: 3 } },
-                { id: "s2", type: "sequencer", x: 0, y: 400, params: { bpm: 90 } },
-                { id: "e1", type: "envelope", x: 500, y: 0, params: { attack: "fast" } },
-                { id: "x", type: "theremin", x: 0, y: 0, params: {} },
-                { id: "c", type: "comment", x: 0, y: 0, params: {}, text: "Drums", w: 20, h: 300 },
+            v: 2,
+            n: [
+                ["sequencer", 0, 0, { bpm: 999, rows: 40, row0: 5, ghost: 3 }],
+                ["sequencer", 0, 400, { bpm: 90 }],
+                ["envelope", 500, 0, { attack: "fast" }],
+                ["theremin", 0, 0],
+                ["comment", 0, 0, null, "Drums", 20, 300],
             ],
-            edges: [
-                { source: "s1", sourceHandle: "row0", target: "e1", targetHandle: "gate" },
-                { source: "s1", sourceHandle: "row0", target: "e1", targetHandle: "gate" },
-                { source: "s1", sourceHandle: "row0", target: "x", targetHandle: "in" },
-                { source: "s1", sourceHandle: "row0", target: "e1", targetHandle: "in" },
+            e: [
+                [0, "row0", 2, "gate"],
+                [0, "row0", 2, "gate"],
+                [0, "row0", 3, "in"],
+                [0, "row0", 2, "in"],
+                [0, "row0", 9, "gate"],
             ],
         });
         const { nodes, edges } = loadPatch()!;
         // Unknown block type dropped.
-        expect(nodes.map((n) => n.id)).toEqual(["s1", "s2", "e1", "c"]);
+        expect(nodes.map((n) => n.data.type)).toEqual(["sequencer", "sequencer", "envelope", "comment"]);
         const [s1, s2, e1, c] = nodes;
         // Clamped to the range, unknown settings dropped, defaults filled in.
         expect(s1.data.params).toMatchObject({ bpm: 200, rows: 16, row0: 5 });
@@ -46,44 +51,19 @@ describe("loading a saved patch", () => {
         // A Comment keeps its text; a size too small falls back to the default.
         expect(c).toMatchObject({ data: { text: "Drums" }, width: 380, height: 300 });
         // Duplicate, dangling and incompatible cables dropped.
-        expect(edges.map((e) => e.id)).toEqual(["s1:row0->e1:gate"]);
-    });
-
-    it("turns a Volume (removed) into a one-channel Mixer at the same level", () => {
-        store({
-            nodes: [
-                { id: "n", type: "noise", x: 0, y: 0, params: {} },
-                { id: "v", type: "volume", x: 0, y: 0, params: { volume: -12, mute: 0 } },
-                { id: "m", type: "volume", x: 0, y: 0, params: { volume: 6, mute: 1 } },
-                { id: "o", type: "output", x: 0, y: 0, params: {} },
-            ],
-            edges: [
-                { source: "n", sourceHandle: "out", target: "v", targetHandle: "in" },
-                { source: "v", sourceHandle: "out", target: "o", targetHandle: "in" },
-            ],
-        });
-        const { nodes, edges } = loadPatch()!;
-        expect(nodes[1].data).toMatchObject({ type: "mixer", params: { channels: 1, level1: 25 } });
-        expect(nodes[2].data.params.level1).toBe(0);
-        expect(edges.map((e) => e.id)).toEqual(["n:out->v:in1", "v:out->o:in"]);
+        expect(edges.map((e) => e.id)).toEqual([`${s1.id}:row0->${e1.id}:gate`]);
     });
 
     it("drops cables on rows that are hidden", () => {
-        store({
-            nodes: [
-                { id: "s", type: "sequencer", x: 0, y: 0, params: { rows: 2 } },
-                { id: "e", type: "envelope", x: 0, y: 0, params: {} },
-            ],
-            edges: [{ source: "s", sourceHandle: "row3", target: "e", targetHandle: "gate" }],
-        });
+        store({ v: 2, n: [["sequencer", 0, 0, { rows: 2 }], ["envelope", 0, 0]], e: [[0, "row3", 1, "gate"]] });
         expect(loadPatch()!.edges).toEqual([]);
     });
 });
 
 describe("saving", () => {
-    it("writes once, shortly after the last change, without falling blocks or cables", () => {
+        it("writes once, shortly after the last change, compact, without falling blocks or cables", () => {
         vi.useFakeTimers();
-        const seq = createNode("sequencer", { x: 1.4, y: 2.6 }, { id: "s" });
+        const seq = createNode("sequencer", { x: 1.4, y: 2.6 }, { id: "s", params: { bpm: 90 } });
         const env = createNode("envelope", { x: 0, y: 0 }, { id: "e" });
         const falling = { ...createNode("noise", { x: 0, y: 0 }, { id: "n" }), data: { type: "noise", params: {}, removing: true } };
         const note = createNode("comment", { x: 0, y: 0 }, { id: "c", text: "Hi" });
@@ -95,15 +75,42 @@ describe("saving", () => {
         expect(localStorage.getItem(KEY)).toBeNull();
         vi.advanceTimersByTime(400);
 
-        const saved = JSON.parse(localStorage.getItem(KEY)!);
-        expect(saved.nodes.map((n: { id: string }) => n.id)).toEqual(["s", "e", "c"]);
-        expect(saved.nodes[0]).toMatchObject({ x: 1, y: 3 });
-        expect(saved.nodes[2]).toMatchObject({ text: "Hi", w: 380, h: 240 });
-        expect(saved.edges).toEqual([{ source: "s", sourceHandle: "row0", target: "e", targetHandle: "gate" }]);
+        // Only the settings changed from their defaults; cables point to blocks by index.
+        expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual({
+            v: 2,
+            n: [
+                ["sequencer", 1, 3, { bpm: 90 }],
+                ["envelope", 0, 0],
+                ["comment", 0, 0, null, "Hi", 380, 240],
+            ],
+            e: [[0, "row0", 1, "gate"]],
+        });
 
         // And it loads back the same.
         const loaded = loadPatch()!;
-        expect(loaded.nodes.map((n) => n.id)).toEqual(["s", "e", "c"]);
-        expect(loaded.edges.map((e) => e.id)).toEqual(["s:row0->e:gate"]);
+        expect(loaded.nodes.map((n) => n.data.type)).toEqual(["sequencer", "envelope", "comment"]);
+        expect(loaded.nodes[0].data.params).toEqual(seq.data.params);
+        expect(loaded.nodes[2]).toMatchObject({ data: { text: "Hi" }, width: 380, height: 240 });
+        const [s, e] = loaded.nodes.map((n) => n.id);
+        expect(loaded.edges.map((x) => x.id)).toEqual([`${s}:row0->${e}:gate`]);
+    });
+
+    it("keeps every preset whole, in a fraction of the older format", () => {
+        for (const ex of EXAMPLES) {
+            const { nodes, edges } = examplePatch(ex.id);
+            const compact = toCompact(nodes, edges);
+            const back = readPatch(JSON.parse(JSON.stringify(compact)))!;
+            expect(back.nodes.map((n) => n.data), ex.id).toEqual(nodes.map((n) => n.data));
+            expect(back.nodes.map((n) => n.position)).toEqual(nodes.map((n) => n.position));
+            expect(back.edges.length).toBe(edges.length);
+            // Twice as small at least.
+            const verbose = { nodes: nodes.map((n) => ({ id: n.id, type: n.data.type, ...n.position, params: n.data.params })), edges };
+            expect(JSON.stringify(compact).length * 2).toBeLessThan(JSON.stringify(verbose).length);
+        }
+    });
+
+    it("ignores what isn't a patch", () => {
+        expect(readPatch(null)).toBeNull();
+        expect(readPatch({ nodes: [], edges: [] })).toBeNull();
     });
 });

@@ -261,6 +261,27 @@ test("the patch is saved and restored on reload", async ({ page }) => {
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
 });
 
+test("a link holds the whole patch: copied by the share button, opened over the mat, undoable", async ({ page }) => {
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await loadPreset(page, "Groove");
+    const blocks = await nodeCount(page);
+    const cables = await cableCount(page);
+    await page.click(".share-button");
+    await expect(page.locator(".share-bubble")).toContainText("Link copied");
+    const url = await page.evaluate(() => navigator.clipboard.readText());
+    expect(url).toMatch(/#patch=[\w-]+$/);
+
+    await clearMat(page);
+    // Pasted in the address bar: the patch comes back, and the link's fragment goes away.
+    await page.goto(url);
+    await expect(page.locator(".react-flow__node")).toHaveCount(blocks);
+    await expect(page.locator(".react-flow__edge")).toHaveCount(cables);
+    expect(new URL(page.url()).hash).toBe("");
+    // Ctrl+Z: back to the mat as it was before opening the link.
+    await page.keyboard.press("Control+z");
+    await expect(page.locator(".react-flow__node")).toHaveCount(0);
+});
+
 test("Ctrl+A / Ctrl+C / Ctrl+V select, copy and paste blocks, without their cables, at the pointer", async ({ page }) => {
     const noise = await add(page, "Noise");
     const out = await add(page, "Output");

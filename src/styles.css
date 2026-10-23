@@ -908,6 +908,70 @@ button {
     box-shadow: 0 1px 0 var(--ink);
 }
 
+/* ——— Share ——— */
+
+/* Left of the clear button. */
+.share {
+    position: absolute;
+    top: 32px;
+    right: 112px;
+    z-index: 5;
+}
+
+.share-button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    border: 4px solid var(--ink);
+    background: var(--cream);
+    box-shadow: 0 5px 0 var(--ink);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.share-button svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+}
+
+.share-button:hover {
+    transform: translateY(-2px) rotate(-6deg);
+    box-shadow: 0 7px 0 var(--ink);
+}
+
+.share-button:active {
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 var(--ink);
+}
+
+.share-bubble {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: 0;
+    display: grid;
+    gap: 6px;
+    width: max-content;
+    max-width: 320px;
+    padding: 8px 12px;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    background: var(--cream);
+    box-shadow: 0 4px 0 var(--ink);
+    font-weight: 700;
+}
+
+.share-bubble input {
+    width: 290px;
+    font: inherit;
+    font-weight: 400;
+}
+
 /* ——— Clear all ——— */
 
 .clear-button {

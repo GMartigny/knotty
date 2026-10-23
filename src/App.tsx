@@ -16,6 +16,7 @@ import { CableEdge } from "./cables/CableEdge";
 import { Palette } from "./components/Palette";
 import { ClearButton } from "./components/ClearButton";
 import { EmptyMat } from "./components/EmptyMat";
+import { ShareButton, useOpenSharedLink } from "./components/ShareButton";
 import { isTextField } from "./lib/dom";
 
 const nodeTypes = { module: ModuleBlock };
@@ -79,6 +80,7 @@ function Workbench() {
         [screenToFlowPosition],
     );
     usePatchShortcuts(pointer);
+    useOpenSharedLink();
 
     const addAtCenter = useCallback(
         (type: string) => {
@@ -147,6 +149,7 @@ function Workbench() {
                     <Background variant={BackgroundVariant.Dots} gap={28} size={3} color="var(--peg)" />
                 </ReactFlow>
 
+                <ShareButton />
                 <ClearButton />
                 <EmptyMat />
 

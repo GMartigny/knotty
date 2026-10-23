@@ -20,6 +20,7 @@ A playful modular synth in the browser: drop blocks on a mat and link them with 
 - **Presets**: hold the big cross in the top right for 2 seconds to clear the mat, then "Load a preset" offers Soft, Groove and Metal.
 - **Undo**: Ctrl+Z undoes the last change (a cable pulled out by mistake, a deleted block, a moved slider…), Ctrl+Shift+Z or Ctrl+Y redoes it. Cmd on a Mac.
 - **Copy / paste**: Ctrl+C copies the selected blocks (Ctrl+click or drag a box to select several, Ctrl+A for all), Ctrl+V pastes them at the pointer with their settings, without their cables.
+- **Share**: the link button in the top right copies a link that holds the whole patch. Opening it replaces the mat (Ctrl+Z brings yours back).
 - Your patch is saved automatically in the browser.
 
 ## Run locally

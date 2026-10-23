@@ -1,36 +1,90 @@
 import { acceptsBlock, compatible, portKind, registry } from "../modules/registry";
-import type { ParamValues } from "../modules/types";
+import { defaultParams, type ParamValues } from "../modules/types";
 import { COMMENT_SIZE } from "../modules/comment";
 import type { CableEdge, ModuleNode } from "./graph";
-import { alignShared, createCable, createNode } from "./nodes";
+import { alignShared, createCable, createNode, newId } from "./nodes";
 
-const KEY = "knotty:patch:v1";
+const KEY = "knotty:patch:v2";
 const SAVE_DELAY_MS = 300;
 
-/** What gets saved: only durable state, without selection, measurements or animations. */
+export type Patch = { nodes: ModuleNode[]; edges: CableEdge[] };
+
+/** A patch once expanded from its compact form, before clean-up. */
 interface SavedPatch {
     nodes: { id: string; type: string; x: number; y: number; params: ParamValues; text?: string; w?: number; h?: number }[];
     edges: { source: string; sourceHandle: string; target: string; targetHandle: string }[];
 }
 
+/** A block, compact: type, position, settings that differ from the defaults, and a Comment's text and size. */
+type CompactNode = [type: string, x: number, y: number, params?: ParamValues | null, text?: string | null, w?: number, h?: number];
+
 /**
- * Saved patch, cleaned up for the current app version: unknown block types are ignored,
+ * A patch, compact (saved in the browser and shared in links): block ids are dropped (cables point to
+ * blocks by their index), and so are settings left at their default.
+ */
+export interface CompactPatch {
+    v: 2;
+    n: CompactNode[];
+    e: [from: number, sourceHandle: string, to: number, targetHandle: string][];
+}
+
+/** The patch in its compact form, without falling blocks or cables. */
+export function toCompact(nodes: ModuleNode[], edges: CableEdge[]): CompactPatch {
+    const live = nodes.filter((n) => !n.data.removing);
+    const index = new Map(live.map((n, i) => [n.id, i]));
+    return {
+        v: 2,
+        n: live.map((n) => {
+            const { type } = n.data;
+            const defaults = registry[type] ? defaultParams(registry[type]) : {};
+            const changed = Object.entries(n.data.params).filter(([id, v]) => v !== defaults[id]);
+            const node: CompactNode = [type, Math.round(n.position.x), Math.round(n.position.y), changed.length ? Object.fromEntries(changed) : null];
+            if (type === "comment")
+                node.push(
+                    n.data.text ?? "",
+                    Math.round(n.width ?? n.measured?.width ?? COMMENT_SIZE.width),
+                    Math.round(n.height ?? n.measured?.height ?? COMMENT_SIZE.height),
+                );
+            // Nothing after the settings: no need for an empty slot.
+            while (node.length > 3 && node[node.length - 1] == null) node.pop();
+            return node;
+        }),
+        e: edges
+            .filter((e) => !e.data?.dropping && index.has(e.source) && index.has(e.target))
+            .map((e) => [index.get(e.source)!, e.sourceHandle ?? "out", index.get(e.target)!, e.targetHandle ?? "in"]),
+    };
+}
+
+/** A compact patch, expanded with new block ids; `null` if it isn't one. */
+function expand(data: unknown): SavedPatch | null {
+    const d = data as Partial<CompactPatch> | null;
+    if (d?.v !== 2 || !Array.isArray(d.n) || !Array.isArray(d.e) || !d.n.every(Array.isArray)) return null;
+    const ids = d.n.map((n) => newId(String(n[0])));
+    return {
+        nodes: d.n.map(([type, x, y, params, text, w, h], i) => ({
+            id: ids[i],
+            type: String(type),
+            x: Number(x) || 0,
+            y: Number(y) || 0,
+            params: params ?? {},
+            ...(text != null && { text, w, h }),
+        })),
+        edges: d.e
+            .filter((e) => Array.isArray(e) && ids[e[0]] && ids[e[2]])
+            .map(([from, sourceHandle, to, targetHandle]) => ({ source: ids[from], sourceHandle, target: ids[to], targetHandle })),
+    };
+}
+
+/**
+ * A saved or shared patch, cleaned up for the current app version: unknown block types are ignored,
  * settings are kept within their range and filled with their defaults, shared settings (the tempo)
  * are aligned, cables to missing or incompatible sockets and duplicate cables are removed.
- * `null` if nothing is saved or it is unreadable.
+ * `null` if it isn't a patch.
  */
-export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null {
-    let saved: SavedPatch;
-    try {
-        const raw = localStorage.getItem(KEY);
-        if (!raw) return null;
-        saved = JSON.parse(raw);
-        if (!Array.isArray(saved?.nodes) || !Array.isArray(saved?.edges)) return null;
-    } catch {
-        return null;
-    }
+export function readPatch(data: unknown): Patch | null {
+    const saved = expand(data);
+    if (!saved) return null;
 
-    migrate(saved);
     const nodes = alignShared(
         saved.nodes
             .filter((n) => registry[n.type])
@@ -68,55 +122,24 @@ export function loadPatch(): { nodes: ModuleNode[]; edges: CableEdge[] } | null 
     return { nodes, edges: [...edges.values()] };
 }
 
-/**
- * Blocks that no longer exist, turned into their replacement:
- * a Volume (removed) becomes a one-channel Mixer at the same level, its input on channel 1.
- */
-function migrate(saved: SavedPatch) {
-    const volumes = new Set<string>();
-    for (const n of saved.nodes) {
-        if (n.type !== "volume") continue;
-        volumes.add(n.id);
-        const db = Number.isFinite(n.params?.volume) ? n.params.volume : 0;
-        const level = n.params?.mute === 1 ? 0 : Math.round(Math.pow(10, db / 20) * 100);
-        n.type = "mixer";
-        n.params = { channels: 1, level1: Math.min(100, Math.max(0, level)) };
+/** The patch saved in the browser (see `readPatch`), or `null` if nothing readable is saved. */
+export function loadPatch(): Patch | null {
+    try {
+        const raw = localStorage.getItem(KEY);
+        return raw ? readPatch(JSON.parse(raw)) : null;
+    } catch {
+        return null;
     }
-    for (const e of saved.edges) if (volumes.has(e.target) && e.targetHandle === "in") e.targetHandle = "in1";
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-/** Saves the patch shortly after the last change (dragging a block writes only once). */
+/** Saves the patch, compact, shortly after the last change (dragging a block writes only once). */
 export function savePatch(nodes: ModuleNode[], edges: CableEdge[]) {
     clearTimeout(timer);
     timer = setTimeout(() => {
-        const live = nodes.filter((n) => !n.data.removing);
-        const ids = new Set(live.map((n) => n.id));
-        const patch: SavedPatch = {
-            nodes: live.map((n) => ({
-                id: n.id,
-                type: n.data.type,
-                x: Math.round(n.position.x),
-                y: Math.round(n.position.y),
-                params: n.data.params,
-                ...(n.data.type === "comment" && {
-                    text: n.data.text ?? "",
-                    w: Math.round(n.width ?? n.measured?.width ?? COMMENT_SIZE.width),
-                    h: Math.round(n.height ?? n.measured?.height ?? COMMENT_SIZE.height),
-                }),
-            })),
-            edges: edges
-                .filter((e) => !e.data?.dropping && ids.has(e.source) && ids.has(e.target))
-                .map((e) => ({
-                    source: e.source,
-                    sourceHandle: e.sourceHandle ?? "out",
-                    target: e.target,
-                    targetHandle: e.targetHandle ?? "in",
-                })),
-        };
         try {
-            localStorage.setItem(KEY, JSON.stringify(patch));
+            localStorage.setItem(KEY, JSON.stringify(toCompact(nodes, edges)));
         } catch {
             // Storage unavailable (private browsing, quota): the app keeps going without saving.
         }

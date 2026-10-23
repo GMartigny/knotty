@@ -18,15 +18,24 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
     const playhead = usePosition(nodeId);
     // Notes mode: a piano roll, each row named after its note, sharps darker like black keys.
     const notes = params.mode === MODE.notes;
-    // The bottom row plays the frequency of the Oscillator plugged in as a model.
+    // The bottom row plays the frequency of the Oscillator feeding the Envelope plugged in as a model.
     const base = useGraph((g) => {
-        const cable = g.edges.find((e) => e.target === nodeId && e.targetHandle === "voice" && !e.data?.dropping);
-        return g.nodes.find((n) => n.id === cable?.source)?.data.params.frequency ?? DEFAULT_VOICE.frequency;
+        const feeding = (id: string | undefined, port: string) =>
+            g.edges.find((e) => e.target === id && (e.targetHandle ?? "in") === port && !e.data?.dropping)?.source;
+        const oscillator = g.nodes.find((n) => n.id === feeding(feeding(nodeId, "model"), "in"));
+        return oscillator?.data.type === "sine" ? oscillator.data.params.frequency : DEFAULT_VOICE.frequency;
     });
     const rows = rowCount(sequencer, params);
 
     return (
         <div className={`seq ${notes ? "is-notes" : ""}`} role="grid" aria-label="Sequencer steps">
+            {/* Notes mode: the mixed sound first, set apart from the rows' own outputs. */}
+            {notes && (
+                <div className="seq-mix">
+                    <span className="seq-mix-label">All notes</span>
+                    <Handle id="out" type="source" position={Position.Right} className="socket socket-audio" title="All notes, mixed" />
+                </div>
+            )}
             {Array.from({ length: rows }, (_, row) => {
                 const pattern = params[rowParam(row)] ?? 0;
                 const name = notes ? noteName(midiOf(rowFrequency(base, rows, row))) : String(row + 1);
@@ -67,12 +76,6 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
                     </div>
                 );
             })}
-            {notes && (
-                <div className="seq-row seq-mix">
-                    <span className="seq-mix-label">All notes</span>
-                    <Handle id="out" type="source" position={Position.Right} className="socket socket-audio" title="All notes, mixed" />
-                </div>
-            )}
         </div>
     );
 }

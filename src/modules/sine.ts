@@ -26,7 +26,9 @@ export const sine: ModuleDef = {
     create(values) {
         // Fixed level: loudness is set with a Volume block.
         const source = new Tone.Oscillator({ type: SHAPES[values.shape] ?? "sine", volume: SOURCE_DB });
-        const frequency = driven(source.frequency, paramDef(params, "frequency"), values.frequency);
+        // The frequency (slider + modulation) is summed on a bus, so other blocks can follow it live.
+        const frequencyBus = new Tone.Gain(1).connect(source.frequency);
+        const frequency = driven(frequencyBus, paramDef(params, "frequency"), values.frequency);
         let glide = values.glide ?? 0;
         // Samples for the mini-wave shown in the block.
         // ~0.34 s of memory at 48 kHz: enough to lock the wave down to ~7 Hz.
@@ -50,9 +52,11 @@ export const sine: ModuleDef = {
                 if (source.state !== "started") source.start();
             },
             modTarget: (id) => (id === "frequency" ? frequency.modTarget : undefined),
+            tap: (id) => (id === "frequency" ? frequencyBus : undefined),
             dispose: () => {
                 waveform.dispose();
                 frequency.dispose();
+                frequencyBus.dispose();
                 source.dispose();
             },
         };

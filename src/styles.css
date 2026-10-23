@@ -431,11 +431,16 @@ button {
     text-align: center;
 }
 
-/* Notes mode: the mixed output, on its own line under the grid. */
+/* Notes mode: the mixed output, on its own line above the grid, set apart by a rule. */
 .seq-mix {
+    position: relative;
+    display: flex;
+    align-items: center;
     justify-content: flex-end;
-    min-height: 26px;
-    margin-top: 4px;
+    min-height: 28px;
+    margin: 0 -14px 8px 0;
+    padding: 0 14px 8px 0;
+    border-bottom: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
 }
 
 .seq-mix-label {

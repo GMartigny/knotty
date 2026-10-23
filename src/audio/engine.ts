@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 import { startClock } from "./clock";
 import { registry } from "../modules/registry";
-import { modParamOf, SOURCE_LEVEL, type ModuleInstance, type ParamValues } from "../modules/types";
+import { modParamOf, SOURCE_LEVEL, type Model, type ModuleInstance, type ParamValues } from "../modules/types";
 import { useGraph, type CableEdge, type ModuleNode } from "../store/graph";
 
 interface LiveModule {
@@ -44,6 +44,8 @@ class AudioEngine {
     /** On-demand modulations, per setting (`nodeId:paramId`): several cables add up. */
     private sampled = new Map<string, Set<Tone.DCMeter>>();
     private running = false;
+    /** Live cables of the last sync, to find what feeds a model's inputs. */
+    private liveEdges: CableEdge[] = [];
 
     constructor() {
         // Sequencer clock created right away, while the transport is stopped and the tempo stable.
@@ -120,6 +122,7 @@ class AudioEngine {
         // A block whose id comes back with another type (an undo, a preset) is a new block.
         const nodeIds = new Set(nodes.filter((n) => (this.modules.get(n.id)?.type ?? n.data.type) === n.data.type).map((n) => n.id));
         const edgeIds = new Set(edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target)).map((e) => e.id));
+        this.liveEdges = edges;
 
         // 1. Removed cables (before modules, to disconnect cleanly).
         for (const [id, c] of this.cables) {
@@ -187,8 +190,7 @@ class AudioEngine {
         // A model input takes the plugged block's settings, read live, not its sound.
         const targetType = this.modules.get(edge.target)?.type;
         if (targetType && registry[targetType]?.inputs.find((p) => p.id === inPort)?.model) {
-            const source = edge.source;
-            dst.setModel?.(inPort, () => this.modules.get(source)?.params ?? {});
+            dst.setModel?.(inPort, this.model(edge.source));
             this.cables.set(edge.id, { kind: "model", target: edge.target, port: inPort });
             return;
         }
@@ -243,6 +245,19 @@ class AudioEngine {
             for (const m of meters) sum += (m.getValue() as number) / SOURCE_LEVEL;
             return Math.max(-1, Math.min(1, sum));
         });
+    }
+
+    /** A block seen as a model: everything is read at the time of use, so it follows later changes. */
+    private model(nodeId: string): Model {
+        return {
+            type: this.modules.get(nodeId)?.type ?? "",
+            params: () => this.modules.get(nodeId)?.params ?? {},
+            tap: (paramId) => this.modules.get(nodeId)?.instance.tap?.(paramId),
+            input: (portId) => {
+                const edge = this.liveEdges.find((e) => e.target === nodeId && (e.targetHandle ?? "in") === portId);
+                return edge && this.modules.has(edge.source) ? this.model(edge.source) : undefined;
+            },
+        };
     }
 
     private unplug(id: string, cable: LiveCable) {

@@ -199,11 +199,11 @@ test("Transpose moves the keyboard's notes: C4 + 7 semitones = G4", async ({ pag
     await expect(node(page, osc).locator(".mini-scope")).toHaveAttribute("data-hz", "392.0");
 });
 
-test("the sequencer in notes mode plays the notes itself, with an Oscillator and an Envelope as models", async ({ page }) => {
+test("the sequencer in notes mode plays the notes itself, sounding like the Envelope and Oscillator it copies", async ({ page }) => {
     const seq = await add(page, "Sequencer");
     const osc = await add(page, "Oscillator");
     const env = await add(page, "Envelope");
-    const noise = await add(page, "Noise");
+    const lfo = await add(page, "Oscillator");
     const out = await add(page, "Output");
     const block = node(page, seq);
     await block.getByRole("radio", { name: "Notes" }).click({ force: true });
@@ -212,16 +212,17 @@ test("the sequencer in notes mode plays the notes itself, with an Oscillator and
     await expect(block.locator(".seq-row-label").last()).toHaveText("C4");
     await expect(block.locator('[data-handleid="row0"]')).toHaveCount(0);
     await expect(block.locator('[data-handleid="note0"]')).toHaveCount(1);
-    // The Oscillator (220 Hz, A3) sets the bottom note; a Noise is refused as a model.
-    await plug(page, socket(noise, "out"), socket(seq, "voice"));
+    // Only an Envelope is taken as a model; the Oscillator feeding it (220 Hz, A3) sets the bottom note.
+    await plug(page, socket(osc, "out"), socket(seq, "model"));
     expect(await cableCount(page)).toBe(0);
-    await plug(page, socket(osc, "out"), socket(seq, "voice"));
-    await plug(page, socket(env, "out"), socket(seq, "shape"));
+    await plug(page, socket(osc, "out"), socket(env, "in"));
+    await plug(page, socket(env, "out"), socket(seq, "model"));
     await expect(block.locator(".seq-row-label").last()).toHaveText("A3");
     await expect(block.locator(".seq-row-label").first()).toHaveText("A4");
-    // Its mixed sound plays: the default pattern lights the top rows.
+    // A vibrato on the Oscillator: the sequencer's notes follow its frequency live.
+    await plug(page, socket(lfo, "out"), socket(osc, "mod:frequency"));
     await plug(page, socket(seq, "out"), socket(out, "in"));
-    expect(await cableCount(page)).toBe(3);
+    expect(await cableCount(page)).toBe(4);
     await expect.poll(() => peakLevel(page, seq, 0.3), { timeout: 5000 }).toBeGreaterThanOrEqual(0.3);
 });
 

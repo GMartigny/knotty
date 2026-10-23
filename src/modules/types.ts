@@ -145,11 +145,22 @@ export interface ModuleInstance {
     play?(value: number, down: boolean): void;
     /** Real-time modulation of a setting, if that setting is an audio parameter. */
     modTarget?(paramId: string): ModTarget | undefined;
-    /** Model input: the engine provides a function returning the plugged block's current settings, or null. */
-    setModel?(portId: string, read: (() => ParamValues) | null): void;
+    /** Model input: the engine provides the plugged block (see `Model`), or null when unplugged. */
+    setModel?(portId: string, model: Model | null): void;
+    /** A setting's live value as an audio signal (slider + modulation), for blocks that follow it. */
+    tap?(paramId: string): Tone.ToneAudioNode | undefined;
     /** Otherwise, modulation read on demand: the engine provides a function returning the signal (-1…1). */
     setModSource?(paramId: string, read: (() => number) | null): void;
     dispose(): void;
+}
+
+/** A block plugged into a model input, read live: its type, settings, live signals, and what feeds it. */
+export interface Model {
+    type: string;
+    params(): ParamValues;
+    tap(paramId: string): Tone.ToneAudioNode | undefined;
+    /** The block plugged into one of this block's inputs, if any. */
+    input(portId: string): Model | undefined;
 }
 
 export interface ModuleDef {

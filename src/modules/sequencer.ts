@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { onSixteenth } from "../audio/clock";
 import { frequencyOf, midiC } from "./notes";
 import { SHAPES } from "./sine";
-import { SOURCE_DB, type ModuleDef, type ParamDef, type ParamValues, type TriggerListener } from "./types";
+import { SOURCE_DB, type Model, type ModuleDef, type ParamDef, type ParamValues, type TriggerListener } from "./types";
 
 /** Rows shown by a new sequencer, and the most it can have. */
 const SEQ_ROWS = 4;
@@ -53,21 +53,19 @@ const rowParams: ParamDef[] = Array.from({ length: SEQ_MAX_ROWS }, (_, row) => (
 /**
  * Sequencer, two modes:
  * - Tracks: each row is a track with its own trigger output, a hit on every lit step (drums…);
- * - Notes: a piano roll that plays itself. Each row is a semitone above the one below; the bottom one
- *   is the frequency of the Oscillator plugged in as a model, and every note copies that Oscillator's
- *   shape and the plugged Envelope's settings. Its sound comes out mixed, and row by row.
+ * - Notes: a piano roll that plays itself. An Envelope plugged in as a model gives the shape of the notes,
+ *   and the Oscillator plugged into that Envelope gives their sound: its shape, and its frequency (slider
+ *   and modulation, live) for the bottom row; each row above is a semitone higher.
+ *   Its sound comes out mixed, and row by row.
  */
 export const sequencer: ModuleDef = {
     type: "sequencer",
     label: "Sequencer",
     description:
-        "Plays its steps in a loop. Tracks mode: a trigger output per row, for drums. Notes mode: a piano roll that plays itself, using an Oscillator and an Envelope as models.",
+        "Plays its steps in a loop. Tracks mode: a trigger output per row, for drums. Notes mode: a piano roll that plays itself, sounding like the Envelope (and its Oscillator) plugged in.",
     icon: "▦",
     category: "sequencer",
-    inputs: [
-        { id: "voice", kind: "audio", label: "Oscillator (sound, bottom note)", model: true, accepts: ["sine"], when: notes },
-        { id: "shape", kind: "audio", label: "Envelope (note shape)", model: true, accepts: ["envelope"], when: notes },
-    ],
+    inputs: [{ id: "model", kind: "audio", label: "Envelope (and its Oscillator) to copy", model: true, accepts: ["envelope"], when: notes }],
     outputs: [
         ...Array.from({ length: SEQ_MAX_ROWS }, (_, row) => ({
             id: rowOutput(row),
@@ -107,32 +105,64 @@ export const sequencer: ModuleDef = {
         let current = -1;
 
         // ——— Notes mode: one voice per row (oscillator → envelope), created when first played ———
-        const models: Record<string, (() => ParamValues) | null> = { voice: null, shape: null };
+        let model: Model | null = null;
         const mix = new Tone.Gain(1);
         const rowOuts = Array.from({ length: SEQ_MAX_ROWS }, () => new Tone.Gain(1));
-        const voices = new Map<number, { osc: Tone.Oscillator; env: Tone.AmplitudeEnvelope }>();
+        /**
+         * A row's voice. Its frequency follows the model Oscillator's live frequency (slider + modulation)
+         * through `ratio`, the row's interval; with no Oscillator, it is set directly.
+         */
+        interface Voice {
+            osc: Tone.Oscillator;
+            env: Tone.AmplitudeEnvelope;
+            ratio: Tone.Multiply;
+            follows?: Tone.ToneAudioNode;
+        }
+        const voices = new Map<number, Voice>();
         const voiceOf = (row: number) => {
             let v = voices.get(row);
             if (!v) {
                 const osc = new Tone.Oscillator({ volume: SOURCE_DB }).start();
                 const env = new Tone.AmplitudeEnvelope();
+                const ratio = new Tone.Multiply(1);
                 osc.connect(env);
                 env.fan(rowOuts[row], mix);
-                v = { osc, env };
+                v = { osc, env, ratio };
                 voices.set(row, v);
             }
             return v;
         };
+        /** Plugs a voice's frequency to the model Oscillator's live frequency (or unplugs it). */
+        const follow = (v: Voice, frequency: Tone.ToneAudioNode | undefined) => {
+            if (v.follows === frequency) return;
+            if (v.follows) {
+                try {
+                    v.follows.disconnect(v.ratio);
+                } catch {
+                    // the Oscillator it followed is gone
+                }
+                v.ratio.disconnect();
+            }
+            v.follows = frequency;
+            if (frequency) frequency.chain(v.ratio, v.osc.frequency);
+        };
 
         const playNotes = (time: number, step: number) => {
-            const sound = { ...DEFAULT_VOICE, ...models.voice?.() };
-            const shape = { ...DEFAULT_SHAPE, ...models.shape?.() };
+            const oscillator = model?.input("in");
+            const sine = oscillator?.type === "sine" ? oscillator : undefined;
+            const sound = { ...DEFAULT_VOICE, ...sine?.params() };
+            const shape = { ...DEFAULT_SHAPE, ...model?.params() };
+            const live = sine?.tap("frequency");
             const rows = values.rows ?? SEQ_ROWS;
             for (let row = 0; row < rows; row++) {
                 if (!isStepOn(values[rowParam(row)] ?? 0, step)) continue;
-                const { osc, env } = voiceOf(row);
+                const v = voiceOf(row);
+                const { osc, env } = v;
                 osc.type = SHAPES[sound.shape] ?? "sine";
-                osc.frequency.setValueAtTime(rowFrequency(sound.frequency, rows, row), time);
+                follow(v, live);
+                const interval = rowFrequency(1, rows, row);
+                if (live) v.ratio.factor.setValueAtTime(interval, time);
+                else osc.frequency.setValueAtTime(rowFrequency(sound.frequency, rows, row), time);
                 env.attack = shape.attack;
                 env.decay = shape.decay;
                 env.sustain = shape.sustain;
@@ -161,8 +191,8 @@ export const sequencer: ModuleDef = {
                 values[param] = value;
                 if (param === "bpm") transport.bpm.rampTo(value, 0.1);
             },
-            setModel(port, read) {
-                models[port] = read;
+            setModel(_port, plugged) {
+                model = plugged;
             },
             listen(port, fn) {
                 const set = listeners[Number(port.replace("row", ""))];
@@ -173,9 +203,10 @@ export const sequencer: ModuleDef = {
             dispose: () => {
                 unsubscribe();
                 listeners.forEach((set) => set.clear());
-                for (const { osc, env } of voices.values()) {
+                for (const { osc, env, ratio } of voices.values()) {
                     osc.dispose();
                     env.dispose();
+                    ratio.dispose();
                 }
                 rowOuts.forEach((g) => g.dispose());
                 mix.dispose();

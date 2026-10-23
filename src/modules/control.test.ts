@@ -75,20 +75,18 @@ describe("Sequencer notes mode", () => {
         expect(portKind("sequencer", "row0", "out", tracks)).toBe("trigger");
         expect(portKind("sequencer", "note0", "out", tracks)).toBeUndefined();
         expect(portKind("sequencer", "out", "out", tracks)).toBeUndefined();
-        expect(portKind("sequencer", "voice", "in", tracks)).toBeUndefined();
+        expect(portKind("sequencer", "model", "in", tracks)).toBeUndefined();
         expect(portKind("sequencer", "row0", "out", base)).toBeUndefined();
         expect(portKind("sequencer", "note12", "out", base)).toBe("audio");
         expect(portKind("sequencer", "note13", "out", base)).toBeUndefined();
         expect(portKind("sequencer", "out", "out", base)).toBe("audio");
-        expect(portKind("sequencer", "voice", "in", base)).toBe("audio");
-        expect(portKind("sequencer", "shape", "in", base)).toBe("audio");
+        expect(portKind("sequencer", "model", "in", base)).toBe("audio");
     });
 
-    it("only takes an Oscillator as sound model and an Envelope as note shape", () => {
-        expect(acceptsBlock("sequencer", "voice", "sine")).toBe(true);
-        expect(acceptsBlock("sequencer", "voice", "noise")).toBe(false);
-        expect(acceptsBlock("sequencer", "shape", "envelope")).toBe(true);
-        expect(acceptsBlock("sequencer", "shape", "sine")).toBe(false);
+    it("only takes an Envelope as model", () => {
+        expect(acceptsBlock("sequencer", "model", "envelope")).toBe(true);
+        expect(acceptsBlock("sequencer", "model", "sine")).toBe(false);
+        expect(acceptsBlock("sequencer", "model", "noise")).toBe(false);
         // Other inputs take anything compatible.
         expect(acceptsBlock("filter", "in", "noise")).toBe(true);
     });

@@ -149,6 +149,10 @@ function SoundBlock({ id, data, selected }: NodeProps<ModuleNode>) {
                                 value={data.params[p.id]}
                                 modulated={plugged.has(modPort(p.id))}
                                 onChange={(v) => setParam(id, p.id, v)}
+                                {...(p.mute && {
+                                    muted: data.params[p.mute] === 1,
+                                    onMute: (muted: boolean) => setParam(id, p.mute!, muted ? 1 : 0),
+                                })}
                             />
                         ))}
                     {def.type === "sequencer" && (

@@ -57,6 +57,8 @@ export interface ParamDef {
     bare?: boolean;
     /** The same value on every block of this type (e.g. the sequencers' tempo, which is global). */
     shared?: boolean;
+    /** On/off setting (0 or 1) that silences this one without changing it: a mute switch shown beside the slider. */
+    mute?: string;
 }
 
 export type ModuleCategory = "source" | "effect" | "sequencer" | "output" | "note";

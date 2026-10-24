@@ -317,6 +317,21 @@ button {
     height: 18px;
 }
 
+/* With a mute switch after the value. */
+.param.is-bare.has-mute {
+    grid-template-columns: 1fr 3.2em auto;
+}
+
+.param.is-bare .toggle-mini {
+    order: 2;
+}
+
+/* Muted: the level stays as set, greyed out. */
+.param.is-muted .slider,
+.param.is-muted .param-value {
+    opacity: 0.35;
+}
+
 .param.is-bare .param-value {
     order: 1;
     line-height: 18px;
@@ -785,6 +800,23 @@ button {
 
 .toggle[aria-checked="true"] .toggle-knob {
     transform: translateX(20px);
+}
+
+/* Small switch on a row (Mixer channel mute). */
+.toggle-mini {
+    width: 30px;
+    height: 18px;
+}
+
+.toggle-mini .toggle-knob {
+    top: 1px;
+    left: 1px;
+    width: 12px;
+    height: 12px;
+}
+
+.toggle-mini[aria-checked="true"] .toggle-knob {
+    transform: translateX(12px);
 }
 
 /* Muted output: the block goes dark. */

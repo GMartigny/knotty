@@ -256,6 +256,25 @@ test("a Notes sequencer copies the effects between its Envelope and its model in
     await expect.poll(() => peakLevel(page, seq, 0.3), { timeout: 5000 }).toBeGreaterThanOrEqual(0.3);
 });
 
+test("a Mixer channel's switch mutes it without changing its level", async ({ page }) => {
+    const noise = await add(page, "Noise");
+    const mix = await add(page, "Mixer");
+    const out = await add(page, "Output");
+    await plug(page, socket(noise, "out"), socket(mix, "in1"));
+    await plug(page, socket(mix, "out"), socket(out, "in"));
+    expect(await peakLevel(page, mix, 0.3)).toBeGreaterThanOrEqual(0.3);
+    const channel = node(page, mix).locator(".param").first();
+    const mute = channel.getByRole("switch", { name: "Channel 1 sound" });
+    await mute.click({ force: true });
+    await expect(mute).toHaveAttribute("aria-checked", "false");
+    await expect(channel.locator(".param-value")).toHaveText("75 %");
+    await page.waitForTimeout(500);
+    expect(await peakLevel(page, mix, 1, 1000)).toBeLessThan(0.1);
+    // Ctrl+Z: the sound is back.
+    await page.keyboard.press("Control+z");
+    await expect(mute).toHaveAttribute("aria-checked", "true");
+});
+
 test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {
     const keys = await add(page, "Keyboard");
     const osc = await add(page, "Oscillator");

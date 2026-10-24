@@ -11,9 +11,12 @@ interface Props {
     modulated?: boolean;
     /** Row index on a block with a variable number of rows, used to measure row height. */
     row?: number;
+    /** With `def.mute`: whether the setting is silenced, and the switch's action. */
+    muted?: boolean;
+    onMute?(muted: boolean): void;
 }
 
-export function ParamControl({ def, value, onChange, modulated, row }: Props) {
+export function ParamControl({ def, value, onChange, modulated, row, muted, onMute }: Props) {
     const inputId = useId();
     if (def.options) {
         return (
@@ -40,7 +43,7 @@ export function ParamControl({ def, value, onChange, modulated, row }: Props) {
     const t = toSlider(def, value);
     return (
         <div
-            className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""} ${def.bare ? "is-bare" : ""}`}
+            className={`param has-port ${def.inputPort ? "has-input" : ""} ${modulated ? "is-modulated" : ""} ${def.bare ? "is-bare" : ""} ${onMute ? "has-mute" : ""} ${muted ? "is-muted" : ""}`}
             data-row={row}
         >
             {def.bare ? (
@@ -68,6 +71,19 @@ export function ParamControl({ def, value, onChange, modulated, row }: Props) {
                 style={{ "--t": t } as React.CSSProperties}
                 onChange={(e) => onChange(fromSlider(def, Number(e.target.value)))}
             />
+            {onMute && (
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!muted}
+                    aria-label={`${def.label} sound`}
+                    title={muted ? "Unmute" : "Mute"}
+                    className="toggle toggle-mini nodrag"
+                    onClick={() => onMute(!muted)}
+                >
+                    <span className="toggle-knob" aria-hidden />
+                </button>
+            )}
             {def.inputPort && (
                 <Handle
                     id={def.inputPort}

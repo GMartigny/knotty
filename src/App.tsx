@@ -20,6 +20,7 @@ import { ShareButton, useOpenSharedLink } from "./components/ShareButton";
 import { isTextField } from "./lib/dom";
 
 const nodeTypes = { module: ModuleBlock };
+const SELECT_KEYS = ["Control", "Meta", "Shift"];
 const edgeTypes = { cable: CableEdge };
 
 /**
@@ -132,6 +133,10 @@ function Workbench() {
                     // A selected Comment stays behind the blocks.
                     elevateNodesOnSelect={false}
                     deleteKeyCode={["Backspace", "Delete"]}
+                    // The same keys for both ways of selecting several blocks: Ctrl (Cmd) or Shift,
+                    // held while clicking blocks or while dragging a box on the mat.
+                    multiSelectionKeyCode={SELECT_KEYS}
+                    selectionKeyCode={SELECT_KEYS}
                     onBeforeDelete={async ({ nodes: deletedNodes, edges: deletedEdges }) => {
                         // Keyboard deletion: blocks fall (and their cables with them);
                         // cables selected on their own disappear right away.

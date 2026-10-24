@@ -331,6 +331,33 @@ test("a link holds the whole patch: copied by the share button, opened over the 
     await expect(page.locator(".react-flow__node")).toHaveCount(0);
 });
 
+test("several blocks are selected with Ctrl or Shift, by clicking them or dragging a box", async ({ page }) => {
+    const a = await add(page, "Noise");
+    const b = await add(page, "Output");
+    const selected = page.locator(".react-flow__node.selected");
+    const empty = async () => {
+        await page.locator(".mat").click({ position: { x: 5, y: 5 } });
+        await expect(selected).toHaveCount(0);
+    };
+    for (const key of ["Shift", "Control"]) {
+        await empty();
+        await node(page, a).locator(".block-head").click({ modifiers: [key as "Shift" | "Control"], force: true });
+        await node(page, b).locator(".block-head").click({ modifiers: [key as "Shift" | "Control"], force: true });
+        await expect(selected).toHaveCount(2);
+
+        await empty();
+        const boxes = [(await node(page, a).boundingBox())!, (await node(page, b).boundingBox())!];
+        const left = Math.min(...boxes.map((r) => r.x)) - 30;
+        const top = Math.min(...boxes.map((r) => r.y)) - 30;
+        const right = Math.max(...boxes.map((r) => r.x + r.width)) + 30;
+        const bottom = Math.max(...boxes.map((r) => r.y + r.height)) + 30;
+        await page.keyboard.down(key);
+        await drag(page, { x: left, y: top }, { x: right, y: bottom });
+        await page.keyboard.up(key);
+        await expect(selected).toHaveCount(2);
+    }
+});
+
 test("Ctrl+A / Ctrl+C / Ctrl+V select, copy and paste blocks, without their cables, at the pointer", async ({ page }) => {
     const noise = await add(page, "Noise");
     const out = await add(page, "Output");

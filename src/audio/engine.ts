@@ -46,6 +46,8 @@ class AudioEngine {
     private running = false;
     /** Live cables of the last sync, to find what feeds a model's inputs. */
     private liveEdges: CableEdge[] = [];
+    /** Copies of a block made through its model (a Notes sequencer's effects), which take its modulations too. */
+    private copies = new Map<string, Set<ModuleInstance>>();
 
     constructor() {
         // Sequencer clock created right away, while the transport is stopped and the tempo stable.
@@ -218,6 +220,7 @@ class AudioEngine {
             const scaler = new Tone.Multiply(target.depth(base) / SOURCE_LEVEL);
             from.connect(scaler);
             scaler.connect(target.param);
+            for (const copy of this.copies.get(edge.target) ?? []) this.modulateCopy(copy, paramId, scaler);
             this.cables.set(edge.id, { kind: "mod", from, target: edge.target, paramId, scaler, depth: target.depth });
             return;
         }
@@ -234,17 +237,49 @@ class AudioEngine {
 
     private updateSampled(nodeId: string, paramId: string) {
         const meters = this.sampled.get(`${nodeId}:${paramId}`);
-        const instance = this.modules.get(nodeId)?.instance;
+        const instances = [this.modules.get(nodeId)?.instance, ...(this.copies.get(nodeId) ?? [])];
         if (!meters?.size) {
             this.sampled.delete(`${nodeId}:${paramId}`);
-            instance?.setModSource?.(paramId, null);
+            for (const instance of instances) instance?.setModSource?.(paramId, null);
             return;
         }
-        instance?.setModSource?.(paramId, () => {
+        const read = () => {
             let sum = 0;
             for (const m of meters) sum += (m.getValue() as number) / SOURCE_LEVEL;
             return Math.max(-1, Math.min(1, sum));
-        });
+        };
+        for (const instance of instances) instance?.setModSource?.(paramId, read);
+    }
+
+    /** A copy's setting moved by the same (already scaled) modulation as the original's. */
+    private modulateCopy(copy: ModuleInstance, paramId: string, scaler: Tone.Multiply) {
+        const target = copy.modTarget?.(paramId);
+        if (target) scaler.connect(target.param);
+    }
+
+    /**
+     * A new instance of a block, with its current settings and its modulations, live: cables plugged into
+     * the original's modulation sockets later also move the copy, until it is disposed.
+     */
+    private copyOf(nodeId: string): ModuleInstance | undefined {
+        const live = this.modules.get(nodeId);
+        const def = live && registry[live.type];
+        if (!def) return undefined;
+        const copy = def.create(live.params);
+        const copies = this.copies.get(nodeId) ?? new Set();
+        copies.add(copy);
+        this.copies.set(nodeId, copies);
+        for (const c of this.cables.values()) {
+            if (c.kind === "mod" && c.target === nodeId && c.scaler) this.modulateCopy(copy, c.paramId, c.scaler);
+        }
+        for (const key of this.sampled.keys()) if (key.startsWith(`${nodeId}:`)) this.updateSampled(nodeId, key.slice(nodeId.length + 1));
+        const dispose = copy.dispose.bind(copy);
+        copy.dispose = () => {
+            copies.delete(copy);
+            if (!copies.size && this.copies.get(nodeId) === copies) this.copies.delete(nodeId);
+            dispose();
+        };
+        return copy;
     }
 
     /** A block seen as a model: everything is read at the time of use, so it follows later changes. */
@@ -257,10 +292,7 @@ class AudioEngine {
                 const edge = this.liveEdges.find((e) => e.target === nodeId && (e.targetHandle ?? "in") === portId);
                 return edge && this.modules.has(edge.source) ? this.model(edge.source) : undefined;
             },
-            copy: () => {
-                const live = this.modules.get(nodeId);
-                return live && registry[live.type]?.create(live.params);
-            },
+            copy: () => this.copyOf(nodeId),
         };
     }
 

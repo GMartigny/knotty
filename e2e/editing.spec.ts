@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("resting on a palette block shows what it does, above the start screen", async ({ page }) => {
-    // Fresh page: the "Start the sound" screen still covers the mat.
+    // Fresh page: the start screen still covers the mat.
     await page.goto("/");
     await expect(page.locator(".start")).toBeVisible();
     const item = page.locator(".palette-item", { hasText: "Filter" });

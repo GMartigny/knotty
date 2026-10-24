@@ -155,17 +155,27 @@ function Workbench() {
 
                 {!started && (
                     <div className="start">
-                        <button
-                            type="button"
-                            className="start-button"
-                            onClick={async () => {
-                                await engine.start();
-                                setStarted(true);
-                            }}
-                        >
-                            Start the sound
-                        </button>
-                        <p>The browser needs a click before it can play audio.</p>
+                        <section className="start-card" aria-labelledby="start-title">
+                            <h1 id="start-title">knotty</h1>
+                            <p className="start-lead">A playful modular synth: drop blocks on the mat and link them with cables to make sound.</p>
+                            <ul className="start-list">
+                                <li>Oscillators and noise make sound, envelopes cut it into notes, filters and effects shape it.</li>
+                                <li>Sequencers and the keyboard play beats and melodies; a die and scales add chance.</li>
+                                <li>Plug a slow oscillator into a setting to make it move on its own.</li>
+                                <li>Start from a preset (hold the cross to clear the mat), undo anything, share by link.</li>
+                            </ul>
+                            <button
+                                type="button"
+                                className="start-button"
+                                onClick={async () => {
+                                    await engine.start();
+                                    setStarted(true);
+                                }}
+                            >
+                                Let's start
+                            </button>
+                            <p className="start-note">Sound on! The browser needs this click before it can play audio.</p>
+                        </section>
                     </div>
                 )}
             </main>

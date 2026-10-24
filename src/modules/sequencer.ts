@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { onSixteenth } from "../audio/clock";
 import { frequencyOf, midiC } from "./notes";
 import { SHAPES } from "./sine";
-import { SOURCE_DB, type Model, type ModuleDef, type ParamDef, type ParamValues, type TriggerListener } from "./types";
+import { SOURCE_DB, type Model, type ModuleDef, type ModuleInstance, type ParamDef, type ParamValues, type TriggerListener } from "./types";
 
 /** Rows shown by a new sequencer, and the most it can have. */
 const SEQ_ROWS = 4;
@@ -58,22 +58,53 @@ const rowParams: ParamDef[] = Array.from({ length: SEQ_MAX_ROWS }, (_, row) => (
 }));
 
 /**
+ * Effects a Notes sequencer copies when they sit between its model Envelope and its model input,
+ * and the input their sound comes in by. (No Reverb: a copy per note would cost a lot for a sound
+ * that is the same on the mix.)
+ */
+export const MODEL_EFFECTS: Record<string, string> = { distortion: "in", filter: "in", echo: "in", transpose: "in", mixer: "in1" };
+
+/**
+ * From the block plugged into the model input, upstream: the effects to copy, in playing order
+ * (the one right after the Envelope first), and the Envelope at the start of the chain, if any.
+ */
+export function modelChain(model: Model | null | undefined): { envelope?: Model; effects: Model[] } {
+    const effects: Model[] = [];
+    let m = model ?? undefined;
+    while (m && m.type !== "envelope" && MODEL_EFFECTS[m.type] && effects.length < 16) {
+        effects.unshift(m);
+        m = m.input(MODEL_EFFECTS[m.type]);
+    }
+    return { envelope: m?.type === "envelope" ? m : undefined, effects };
+}
+
+/**
  * Sequencer, two modes:
  * - Tracks: each row is a track with its own trigger output, a hit on every lit step (drums…);
  * - Notes: a piano roll that plays itself. An Envelope plugged in as a model gives the shape of the notes,
  *   and the Oscillator plugged into that Envelope gives their sound: its shape, its frequency (slider
  *   and modulation, live) for the bottom row, each row above a semitone higher, and its Glide (each note
- *   slides from the closest note of the previous step).
- *   Its sound comes out mixed, and row by row.
+ *   slides from the closest note of the previous step). Effects between the Envelope and the model input
+ *   (Distortion, Filter, Echo, Transpose, one-channel Mixer) are copied too, one copy per note, so each
+ *   note is distorted on its own. Its sound comes out mixed, and row by row.
  */
 export const sequencer: ModuleDef = {
     type: "sequencer",
     label: "Sequencer",
     description:
-        "Plays its steps in a loop. Tracks mode: a trigger output per row, for drums. Notes mode: a piano roll that plays itself, sounding like the Envelope (and its Oscillator) plugged in.",
+        "Plays its steps in a loop. Tracks mode: a trigger output per row, for drums. Notes mode: a piano roll that plays itself, sounding like the Envelope (with its Oscillator and effects) plugged in.",
     icon: "▦",
     category: "sequencer",
-    inputs: [{ id: "model", kind: "audio", label: "Envelope (and its Oscillator) to copy", model: true, accepts: ["envelope"], when: notes }],
+    inputs: [
+        {
+            id: "model",
+            kind: "audio",
+            label: "Envelope (with its Oscillator and effects) to copy",
+            model: true,
+            accepts: ["envelope", ...Object.keys(MODEL_EFFECTS)],
+            when: notes,
+        },
+    ],
     outputs: [
         ...Array.from({ length: SEQ_MAX_ROWS }, (_, row) => ({
             id: rowOutput(row),
@@ -121,10 +152,14 @@ export const sequencer: ModuleDef = {
          * through `ratio`, the row's interval; with no Oscillator, it is set directly.
          */
         interface Voice {
+            row: number;
             osc: Tone.Oscillator;
             env: Tone.AmplitudeEnvelope;
             ratio: Tone.Multiply;
             follows?: Tone.ToneAudioNode;
+            /** Its copies of the model's effects, after the envelope, and their types ("distortion,filter"). */
+            effects: { instance: ModuleInstance; params: ParamValues; index: number }[];
+            chain: string;
         }
         const voices = new Map<number, Voice>();
         const voiceOf = (row: number) => {
@@ -135,10 +170,47 @@ export const sequencer: ModuleDef = {
                 const ratio = new Tone.Multiply(1);
                 osc.connect(env);
                 env.fan(rowOuts[row], mix);
-                v = { osc, env, ratio };
+                v = { row, osc, env, ratio, effects: [], chain: "" };
                 voices.set(row, v);
             }
             return v;
+        };
+        const disposeEffects = (v: Voice) => {
+            for (const { instance } of v.effects) instance.dispose();
+            v.effects = [];
+        };
+        /** Gives a voice its own copy of the model's effects (rebuilt if the chain changed), with their current settings. */
+        const copyEffects = (v: Voice, effects: Model[]) => {
+            const chain = effects.map((e) => e.type).join(",");
+            if (chain !== v.chain) {
+                v.env.disconnect();
+                disposeEffects(v);
+                let last: Tone.ToneAudioNode = v.env;
+                for (const [index, e] of effects.entries()) {
+                    const params = e.params();
+                    const instance = e.copy();
+                    if (!instance) continue;
+                    instance.start?.();
+                    const into = instance.input(MODEL_EFFECTS[e.type]);
+                    const out = instance.output("out");
+                    if (!into || !out) {
+                        instance.dispose();
+                        continue;
+                    }
+                    last.connect(into as Tone.InputNode);
+                    last = out as Tone.ToneAudioNode;
+                    v.effects.push({ instance, params, index });
+                }
+                last.fan(rowOuts[v.row], mix);
+                v.chain = chain;
+            }
+            // Settings changed on the model's effects since the last note.
+            v.effects.forEach((copy) => {
+                const params = effects[copy.index]?.params();
+                if (!params || params === copy.params) return;
+                for (const [key, value] of Object.entries(params)) if (copy.params[key] !== value) copy.instance.setParam(key, value);
+                copy.params = params;
+            });
         };
         /** Plugs a voice's frequency to the model Oscillator's live frequency (or unplugs it). */
         const follow = (v: Voice, frequency: Tone.ToneAudioNode | undefined) => {
@@ -158,10 +230,11 @@ export const sequencer: ModuleDef = {
         /** Notes of the last step that played some (intervals from the bottom row), for the glide. */
         let previousNotes: number[] = [];
         const playNotes = (time: number, step: number) => {
-            const oscillator = model?.input("in");
+            const { envelope, effects } = modelChain(model);
+            const oscillator = envelope?.input("in");
             const sine = oscillator?.type === "sine" ? oscillator : undefined;
             const sound = { ...DEFAULT_VOICE, ...sine?.params() };
-            const shape = { ...DEFAULT_SHAPE, ...model?.params() };
+            const shape = { ...DEFAULT_SHAPE, ...envelope?.params() };
             const live = sine?.tap("frequency");
             const glide = sound.glide ?? 0;
             const rows = values.rows ?? SEQ_ROWS;
@@ -170,6 +243,7 @@ export const sequencer: ModuleDef = {
                 if (!isStepOn(values[rowParam(row)] ?? 0, step)) continue;
                 const v = voiceOf(row);
                 const { osc, env } = v;
+                copyEffects(v, effects);
                 osc.type = SHAPES[sound.shape] ?? "sine";
                 follow(v, live);
                 const interval = rowFrequency(1, rows, row);
@@ -225,7 +299,9 @@ export const sequencer: ModuleDef = {
             dispose: () => {
                 unsubscribe();
                 listeners.forEach((set) => set.clear());
-                for (const { osc, env, ratio } of voices.values()) {
+                for (const v of voices.values()) {
+                    const { osc, env, ratio } = v;
+                    disposeEffects(v);
                     osc.dispose();
                     env.dispose();
                     ratio.dispose();

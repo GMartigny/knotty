@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { pickNote } from "./scale";
 import { levelOf } from "./random";
-import { MODE, glideFrom, isStepOn, rowFrequency, toggleStep } from "./sequencer";
+import { MODE, MODEL_EFFECTS, glideFrom, modelChain, isStepOn, rowFrequency, toggleStep } from "./sequencer";
 import { acceptsBlock, portKind, registry } from "./registry";
-import { defaultParams } from "./types";
+import { defaultParams, type Model } from "./types";
 import { frequencyOf, midiOf, noteName } from "./notes";
 import { SOURCE_LEVEL } from "./types";
 
@@ -87,6 +87,9 @@ describe("Sequencer notes mode", () => {
         expect(acceptsBlock("sequencer", "model", "envelope")).toBe(true);
         expect(acceptsBlock("sequencer", "model", "sine")).toBe(false);
         expect(acceptsBlock("sequencer", "model", "noise")).toBe(false);
+        // Effects behind the Envelope are copied with it; not a Reverb (too costly per note).
+        expect(acceptsBlock("sequencer", "model", "distortion")).toBe(true);
+        expect(acceptsBlock("sequencer", "model", "reverb")).toBe(false);
         // Other inputs take anything compatible.
         expect(acceptsBlock("filter", "in", "noise")).toBe(true);
     });
@@ -106,5 +109,33 @@ describe("Sequencer notes mode", () => {
         expect(adjust({ ...base, rows: 16 }, "mode")).toEqual({});
         expect(adjust({ ...base, mode: MODE.tracks, rows: 4 }, "mode")).toEqual({});
         expect(adjust({ ...base, rows: 4 }, "bpm")).toEqual({});
+    });
+});
+
+describe("the model chain of a Notes sequencer", () => {
+    /** A fake model block of some type, fed by `from` on the input its sound comes in by. */
+    const block = (type: string, from?: Model): Model => ({
+        type,
+        params: () => ({}),
+        tap: () => undefined,
+        input: (port) => (port === (MODEL_EFFECTS[type] ?? "in") ? from : undefined),
+        copy: () => undefined,
+    });
+
+    it("goes up through the effects to the Envelope, effects in playing order", () => {
+        const env = block("envelope", block("sine"));
+        const filter = block("filter", env);
+        const level = block("mixer", filter);
+        const dist = block("distortion", level);
+        const { envelope, effects } = modelChain(dist);
+        expect(envelope).toBe(env);
+        expect(effects.map((e) => e.type)).toEqual(["filter", "mixer", "distortion"]);
+    });
+
+    it("an Envelope alone has no effects; a chain without Envelope has none either", () => {
+        const env = block("envelope");
+        expect(modelChain(env)).toEqual({ envelope: env, effects: [] });
+        expect(modelChain(block("distortion", block("sine"))).envelope).toBeUndefined();
+        expect(modelChain(null)).toEqual({ envelope: undefined, effects: [] });
     });
 });

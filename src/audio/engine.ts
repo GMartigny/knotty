@@ -257,6 +257,10 @@ class AudioEngine {
                 const edge = this.liveEdges.find((e) => e.target === nodeId && (e.targetHandle ?? "in") === portId);
                 return edge && this.modules.has(edge.source) ? this.model(edge.source) : undefined;
             },
+            copy: () => {
+                const live = this.modules.get(nodeId);
+                return live && registry[live.type]?.create(live.params);
+            },
         };
     }
 

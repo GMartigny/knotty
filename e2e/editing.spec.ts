@@ -237,6 +237,25 @@ test("the sequencer in notes mode plays the notes itself, sounding like the Enve
     await expect.poll(() => peakLevel(page, seq, 0.3), { timeout: 5000 }).toBeGreaterThanOrEqual(0.3);
 });
 
+test("a Notes sequencer copies the effects between its Envelope and its model input, one copy per note", async ({ page }) => {
+    const seq = await add(page, "Sequencer");
+    const osc = await add(page, "Oscillator");
+    const env = await add(page, "Envelope");
+    const dist = await add(page, "Distortion");
+    const out = await add(page, "Output");
+    const block = node(page, seq);
+    await block.getByRole("radio", { name: "Notes" }).click({ force: true });
+    await plug(page, socket(osc, "out"), socket(env, "in"));
+    await plug(page, socket(env, "out"), socket(dist, "in"));
+    await plug(page, socket(dist, "out"), socket(seq, "model"));
+    expect(await cableCount(page)).toBe(3);
+    // Through the Distortion, the Oscillator (220 Hz, A3) still sets the bottom note.
+    await expect(block.locator(".seq-row-label").last()).toHaveText("A3");
+    await block.locator("[data-row] .seq-step").first().click({ force: true });
+    await plug(page, socket(seq, "out"), socket(out, "in"));
+    await expect.poll(() => peakLevel(page, seq, 0.3), { timeout: 5000 }).toBeGreaterThanOrEqual(0.3);
+});
+
 test("a key held on the keyboard holds the note, released it fades", async ({ page }) => {
     const keys = await add(page, "Keyboard");
     const osc = await add(page, "Oscillator");

@@ -161,6 +161,8 @@ export interface Model {
     tap(paramId: string): Tone.ToneAudioNode | undefined;
     /** The block plugged into one of this block's inputs, if any. */
     input(portId: string): Model | undefined;
+    /** A new, separate instance of this block, with its current settings (the caller disposes it). */
+    copy(): ModuleInstance | undefined;
 }
 
 export interface ModuleDef {

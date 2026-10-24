@@ -1,6 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import { usePosition } from "../audio/usePosition";
-import { DEFAULT_VOICE, MODE, SEQ_STEPS, isStepOn, noteOutput, rowFrequency, rowOutput, rowParam, sequencer, toggleStep } from "../modules/sequencer";
+import { DEFAULT_VOICE, MODE, MODEL_EFFECTS, SEQ_STEPS, isStepOn, noteOutput, rowFrequency, rowOutput, rowParam, sequencer, toggleStep } from "../modules/sequencer";
 import { midiOf, noteName } from "../modules/notes";
 import { useGraph } from "../store/graph";
 import { rowCount, type ParamValues } from "../modules/types";
@@ -22,7 +22,14 @@ export function SequencerGrid({ nodeId, params, onChange }: Props) {
     const base = useGraph((g) => {
         const feeding = (id: string | undefined, port: string) =>
             g.edges.find((e) => e.target === id && (e.targetHandle ?? "in") === port && !e.data?.dropping)?.source;
-        const oscillator = g.nodes.find((n) => n.id === feeding(feeding(nodeId, "model"), "in"));
+        // Up the model chain, through the effects copied with it, to the Envelope, then its Oscillator.
+        let id = feeding(nodeId, "model");
+        for (let hops = 0; hops < 16; hops++) {
+            const type = g.nodes.find((n) => n.id === id)?.data.type;
+            if (!type || !MODEL_EFFECTS[type]) break;
+            id = feeding(id, MODEL_EFFECTS[type]);
+        }
+        const oscillator = g.nodes.find((n) => n.id === feeding(id, "in"));
         return oscillator?.data.type === "sine" ? oscillator.data.params.frequency : DEFAULT_VOICE.frequency;
     });
     const rows = rowCount(sequencer, params);
